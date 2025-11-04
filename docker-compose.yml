@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./izvorni_kod/backend
+      dockerfile: Dockerfile
+    container_name: web_trilogy_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    volumes:
+      - ./izvorni_kod/backend:/app
+    networks:
+      - web_trilogy_network
+
+  frontend:
+    build:
+      context: ./izvorni_kod/frontend
+      dockerfile: Dockerfile
+    container_name: web_trilogy_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    volumes:
+      - ./izvorni_kod/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - web_trilogy_network
+
+networks:
+  web_trilogy_network:
+    driver: bridge
