@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import type { LoginCredentials } from '../services/api';
+import { apiService, type LoginCredentials } from '../services/api';
 import '../css/LoginPage.css';
 
 const LoginPage = () => {
@@ -23,6 +23,18 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      // First check if AAI login is required
+      const response = await apiService.login(formData);
+
+      // Check if AAI login is required (faculty email detected)
+      if (response.requires_aai && response.aai_login_url) {
+        // Redirect to AAI login
+        window.location.href = response.aai_login_url;
+        return;
+      }
+
+      // If we get here, it's a successful login (AAI check passed or not needed)
+      // Use the AuthContext login which handles token storage
       await login(formData);
       // Redirect to home page on successful login
       navigate('/');
