@@ -1,0 +1,23 @@
+.faculty-cover{height:220px;display:flex;align-items:flex-end}
+.faculty-cover-inner{display:flex;align-items:center;gap:16px;padding:24px 16px}
+.faculty-avatar{width:96px;height:96px;border-radius:12px;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;backdrop-filter:blur(6px)}
+.faculty-title{margin:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.faculty-meta{margin-top:6px;display:flex;gap:8px}
+.pill{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35);padding:4px 10px;border-radius:999px;font-size:12px}
+.pill-light{background:rgba(255,255,255,.9);color:#0f172a;border-color:transparent}
+
+.faculty-tabs{display:flex;gap:8px;border-bottom:1px solid #e2e8f0;margin:12px 0}
+.tab{background:#f8fafc;border:1px solid #e2e8f0;border-bottom:none;padding:8px 12px;border-top-left-radius:8px;border-top-right-radius:8px;color:#334155;cursor:pointer}
+.tab.active{background:#fff;color:#0f172a}
+
+.contacts{display:flex;flex-wrap:wrap;gap:10px}
+.contact{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#0f172a;text-decoration:none}
+
+.assoc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:16px}
+.assoc-card{display:block;text-align:left;border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;cursor:pointer}
+.assoc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.assoc-logo{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.assoc-badge{font-size:12px;background:#e2e8f0;color:#0f172a;border-radius:999px;padding:4px 8px}
+.assoc-title{font-weight:700;margin-bottom:6px}
+.assoc-desc{color:#475569}
+.empty{color:#64748b;padding:8px 0}

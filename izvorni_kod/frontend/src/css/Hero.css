@@ -104,6 +104,7 @@
    align-items: center;
    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
    transition: all 0.3s ease;
+   position: relative;
 }
 
 .search-box:focus-within {
@@ -196,6 +197,162 @@
 
 .filter-btn:active {
    transform: translateY(0) scale(0.98);
+}
+
+/* Search suggestions dropdown */
+.search-suggestions {
+   position: absolute;
+   top: 100%;
+   left: 0;
+   right: 0;
+   margin-top: 8px;
+   background: #ffffff;
+   border: 1px solid #e5e7eb;
+   border-radius: 10px;
+   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+   overflow: hidden;
+   z-index: 5;
+}
+
+.suggestion-item {
+   width: 100%;
+   background: white;
+   border: 0;
+   text-align: left;
+   display: block;
+   padding: 10px 12px;
+   cursor: pointer;
+}
+
+.suggestion-item:hover {
+   background: #f8fafc;
+}
+
+.suggestion-item .suggestion-title {
+   font-weight: 600;
+   color: #0f172a;
+}
+
+.suggestion-item .suggestion-desc {
+   font-size: 0.9rem;
+   color: #475569;
+}
+
+.suggestion-item.muted {
+   color: #6b7280;
+   cursor: default;
+}
+
+.suggestion-more {
+   width: 100%;
+   border: 0;
+   background: #1e70bf;
+   color: white;
+   font-weight: 600;
+   padding: 10px 12px;
+   cursor: pointer;
+}
+
+.suggestion-more:hover {
+   background: #1557a0;
+}
+
+/* Inline live results under search */
+.live-results {
+   margin: 1rem auto 0 auto;
+   max-width: 1000px;
+   text-align: left;
+}
+
+.live-status {
+   background: rgba(255,255,255,0.15);
+   color: #fff;
+   padding: 10px 12px;
+   border-radius: 8px;
+}
+
+.live-section {
+   background: #ffffff;
+   color: #0f172a;
+   border-radius: 12px;
+   padding: 16px;
+   margin-top: 12px;
+}
+
+.live-section-header {
+   font-weight: 700;
+   margin-bottom: 8px;
+}
+
+.live-grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+   gap: 12px;
+}
+
+.live-card {
+   background: #f8fafc;
+   border: 1px solid #e5e7eb;
+   border-radius: 10px;
+   padding: 12px;
+   text-align: left;
+   cursor: pointer;
+}
+
+.live-card:hover {
+   background: #eef2f7;
+}
+
+.live-card-head {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   margin-bottom: 6px;
+}
+
+.live-logo {
+   width: 36px;
+   height: 36px;
+   border-radius: 8px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   color: #fff;
+   font-weight: 800;
+   letter-spacing: 0.5px;
+}
+
+.live-badge {
+   background: #e0f2fe;
+   color: #075985;
+   padding: 2px 8px;
+   border-radius: 999px;
+   font-size: 12px;
+}
+
+.live-title {
+   font-weight: 700;
+   margin-bottom: 4px;
+}
+
+.live-desc {
+   color: #475569;
+   font-size: 0.95rem;
+}
+
+.live-contacts {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 10px;
+   margin-top: 6px;
+}
+
+.contact-item, .contact-link {
+   display: inline-flex;
+   align-items: center;
+   gap: 6px;
+   color: #1e293b;
+   text-decoration: none;
 }
 
 /* Profile Selection Section */

@@ -32,7 +32,7 @@ const ProfilePage = () => {
                         {user ? `${user.firstName} ${user.lastName}` : 'Ime Prezime'}
                      </h1>
                      <p className="profile-role">
-                        {user ? `${user.role.charAt(0).toUpperCase() + user.role.slice(1)}` : 'Student'} - FER
+                        {user ? `${user.role.charAt(0).toUpperCase() + user.role.slice(1)}` : 'Student'}{user?.faculty ? ` - ${user.faculty}` : ''}
                      </p>
                      <p className="profile-email">
                         {user?.email || 'ime.prezime@student.fer.hr'}
