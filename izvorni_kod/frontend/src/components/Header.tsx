@@ -35,6 +35,7 @@ const Header = () => {
             <nav className="nav">
                <Link to="/" className={`nav-link ${isActive('/')}`}>Početna</Link>
                <Link to="/fakulteti" className={`nav-link ${isActive('/fakulteti')}`}>Fakulteti</Link>
+               <Link to="/udruge" className={`nav-link ${isActive('/udruge')}`}>Udruge</Link>
                <Link to="/prakse-i-poslovi" className={`nav-link ${isActive('/prakse-i-poslovi')}`}>Prakse i poslovi</Link>
                <Link to="/resursi" className={`nav-link ${isActive('/resursi')}`}>Resursi</Link>
                {isAuthenticated && (

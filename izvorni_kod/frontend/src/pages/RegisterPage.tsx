@@ -16,6 +16,8 @@ const RegisterPage = () => {
     firstName: '',
     lastName: '',
     role: 'student',
+    faculty: 'FER',
+    interests: [],
   });
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -53,9 +55,14 @@ const RegisterPage = () => {
     if (e.target.name === 'confirmPassword') {
       setConfirmPassword(e.target.value);
     } else {
+      const name = e.target.name;
+      const value = e.target.value;
+      if (name === 'interestsText') {
+        // handled separately
+      }
       setFormData({
         ...formData,
-        [e.target.name]: e.target.value,
+        [name]: value,
       });
     }
   };
@@ -142,9 +149,38 @@ const RegisterPage = () => {
                   >
                     <option value="student">Student</option>
                     <option value="alumni">Alumni</option>
+                    <option value="ucenik">Učenik</option>
                     <option value="employer">Poslodavac</option>
                     <option value="faculty">Fakultet</option>
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="faculty">Fakultet</label>
+                  <select
+                    id="faculty"
+                    name="faculty"
+                    value={formData.faculty}
+                    onChange={handleChange}
+                    className="form-input"
+                  >
+                    <option value="FER">FER</option>
+                    <option value="FFZG">FFZG</option>
+                    <option value="PMF">PMF</option>
+                    <option value="EFZG">EFZG</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="interests">Interesi (zarezom odvojeni)</label>
+                  <input
+                    type="text"
+                    id="interestsText"
+                    name="interestsText"
+                    placeholder="npr. elektronika, robotika, AI"
+                    className="form-input"
+                    onChange={(e) => setFormData({ ...formData, interests: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                  />
                 </div>
 
                 <div className="form-group">

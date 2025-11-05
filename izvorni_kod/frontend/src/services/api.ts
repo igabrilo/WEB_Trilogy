@@ -16,6 +16,8 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   role?: string;
+  faculty?: string;
+  interests?: string[];
 }
 
 export interface User {
@@ -24,6 +26,8 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+   faculty?: string | null;
+   interests?: string[];
 }
 
 export interface AuthResponse {
@@ -31,6 +35,55 @@ export interface AuthResponse {
   message?: string;
   user?: User;
   token?: string;
+}
+
+export interface Association {
+  id: number;
+  slug: string;
+  name: string;
+  faculty?: string;
+  type?: string;
+  logoText?: string;
+  logoBg?: string;
+  shortDescription?: string;
+  description?: string;
+  tags?: string[];
+  links?: Record<string, string>;
+}
+
+export interface ListResponse<T> {
+  success: boolean;
+  count: number;
+  items: T[];
+}
+
+export interface ItemResponse<T> {
+  success: boolean;
+  item: T;
+}
+
+export interface SearchResults {
+  success: boolean;
+  query: string;
+  results: {
+    associations: Association[];
+    faculties: Faculty[];
+  }
+}
+
+export interface FacultyContacts {
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
+}
+
+export interface Faculty {
+  slug: string;
+  name: string;
+  abbreviation?: string;
+  type: 'faculty' | 'academy';
+  contacts?: FacultyContacts;
 }
 
 class ApiService {
@@ -98,6 +151,36 @@ class ApiService {
   async logout(): Promise<void> {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+  }
+
+  async getAssociations(params?: { faculty?: string; q?: string }): Promise<ListResponse<Association>> {
+    const qs = new URLSearchParams();
+    if (params?.faculty) qs.append('faculty', params.faculty);
+    if (params?.q) qs.append('q', params.q);
+    const qp = qs.toString();
+    return this.request<ListResponse<Association>>(`/api/associations${qp ? `?${qp}` : ''}`);
+  }
+
+  async getAssociation(slug: string): Promise<ItemResponse<Association>> {
+    return this.request<ItemResponse<Association>>(`/api/associations/${slug}`);
+  }
+
+  async searchAll(params: { q: string; faculty?: string }): Promise<SearchResults> {
+    const qs = new URLSearchParams();
+    qs.append('q', params.q);
+    if (params.faculty) qs.append('faculty', params.faculty);
+    return this.request<SearchResults>(`/api/search?${qs.toString()}`);
+  }
+
+  async getFaculties(params?: { q?: string }): Promise<ListResponse<Faculty>> {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.append('q', params.q);
+    const qp = qs.toString();
+    return this.request<ListResponse<Faculty>>(`/api/faculties${qp ? `?${qp}` : ''}`);
+  }
+
+  async getFaculty(slug: string): Promise<ItemResponse<Faculty>> {
+    return this.request<ItemResponse<Faculty>>(`/api/faculties/${slug}`);
   }
 }
 
