@@ -70,8 +70,8 @@
 
 .job-type {
    padding: 0.25rem 0.75rem;
-   background: #e6f0ff;
-   color: #0066CC;
+   background: var(--primary-blue-light);
+   color: var(--primary-blue);
    border-radius: 6px;
    font-size: 0.875rem;
    font-weight: 600;
@@ -110,7 +110,7 @@
 
 .job-salary {
    font-weight: 600;
-   color: #0066CC;
+   color: var(--primary-blue);
    padding-top: 0.5rem;
    border-top: 1px solid #e5e7eb;
 }
@@ -118,7 +118,7 @@
 .job-apply-btn {
    width: 100%;
    padding: 0.75rem;
-   background: #0066CC;
+   background: var(--primary-blue);
    color: white;
    border: none;
    border-radius: 8px;
@@ -129,9 +129,9 @@
 }
 
 .job-apply-btn:hover {
-   background: #0052a3;
+   background: var(--primary-blue-dark);
    transform: translateY(-1px);
-   box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+   box-shadow: 0 6px 18px rgba(var(--primary-blue-rgb), 0.25);
 }
 
 .view-all {
@@ -141,8 +141,8 @@
 .btn-view-all {
    padding: 0.875rem 2.5rem;
    background: transparent;
-   border: 2px solid #0066CC;
-   color: #0066CC;
+   border: 2px solid var(--primary-blue);
+   color: var(--primary-blue);
    border-radius: 8px;
    font-weight: 600;
    font-size: 1rem;
@@ -151,10 +151,10 @@
 }
 
 .btn-view-all:hover {
-   background: #0066CC;
+   background: var(--primary-blue);
    color: white;
    transform: translateY(-2px);
-   box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+   box-shadow: 0 6px 18px rgba(var(--primary-blue-rgb), 0.25);
 }
 
 @media (max-width: 768px) {

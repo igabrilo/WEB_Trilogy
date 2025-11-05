@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import '../css/Header.css';
+import logoImage from '../assets/tamnoplavi.png';
 
 const Header = () => {
    const location = useLocation();
@@ -26,11 +27,12 @@ const Header = () => {
       <header className="header">
          <div className="header-container">
             <Link to="/" className="logo">
-               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <rect width="32" height="32" rx="6" fill="#1e70bf" />
-                  <path d="M8 12h16M8 16h16M8 20h10" stroke="white" strokeWidth="2" strokeLinecap="round" />
-               </svg>
-               <span className="logo-text">UNIZG Career Hub</span>
+               <img src={logoImage} alt="UNIZG Logo" className="logo-image" />
+               <span className="logo-text">
+                  <span>UNIZG</span>
+                  <span>Career</span>
+                  <span>Hub</span>
+               </span>
             </Link>
             <nav className="nav">
                <Link to="/" className={`nav-link ${isActive('/')}`}>Početna</Link>

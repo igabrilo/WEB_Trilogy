@@ -3,6 +3,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -13,6 +14,7 @@
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -44,7 +46,7 @@
 }
 
 .register-hero {
-  background: linear-gradient(135deg, #1e70bf 0%, #1557a0 100%);
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
   padding: 3rem 2rem;
   color: white;
 }
@@ -128,7 +130,7 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #1e70bf;
+  border-color: var(--primary-blue);
 }
 
 .form-terms {
@@ -152,20 +154,20 @@
 }
 
 .terms-link {
-  color: #1e70bf;
+  color: var(--primary-blue);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
 
 .terms-link:hover {
-  color: #1557a0;
+  color: var(--primary-blue-dark);
   text-decoration: underline;
 }
 
 .register-btn {
   padding: 1rem;
-  background: #1e70bf;
+  background: var(--primary-blue);
   color: white;
   border: none;
   border-radius: 8px;
@@ -180,7 +182,7 @@
 }
 
 .register-btn:hover:not(:disabled) {
-  background: #1557a0;
+  background: var(--primary-blue-dark);
 }
 
 .register-btn:disabled {
@@ -196,6 +198,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -225,14 +228,14 @@
 }
 
 .login-link {
-  color: #1e70bf;
+  color: var(--primary-blue);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s;
 }
 
 .login-link:hover {
-  color: #1557a0;
+  color: var(--primary-blue-dark);
   text-decoration: underline;
 }
 
@@ -249,4 +252,3 @@
     grid-template-columns: 1fr;
   }
 }
-

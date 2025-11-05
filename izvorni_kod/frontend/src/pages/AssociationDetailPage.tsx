@@ -31,7 +31,7 @@ const AssociationDetailPage = () => {
     <div className="association-detail-page">
       <Header />
       <main className="container" style={{ padding: '2rem 1rem', maxWidth: 900 }}>
-        <Link to="/udruge" style={{ textDecoration: 'none', color: '#1e70bf' }}>&larr; Natrag na udruge</Link>
+        <Link to="/udruge" style={{ textDecoration: 'none', color: 'var(--primary-blue)' }}>&larr; Natrag na udruge</Link>
         {loading ? (
           <p>Učitavanje...</p>
         ) : error ? (
@@ -51,7 +51,7 @@ const AssociationDetailPage = () => {
             {assoc.links && (
               <div style={{ marginTop: 16 }}>
                 {Object.entries(assoc.links).map(([k, v]) => (
-                  <a key={k} href={v} target="_blank" rel="noreferrer" style={{ marginRight: 12, color: '#1e70bf' }}>
+                  <a key={k} href={v} target="_blank" rel="noreferrer" style={{ marginRight: 12, color: 'var(--primary-blue)' }}>
                     {k}
                   </a>
                 ))}

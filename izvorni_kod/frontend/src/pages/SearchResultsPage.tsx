@@ -21,9 +21,9 @@ const SearchResultsPage = () => {
     const run = async () => {
       setLoading(true);
       try {
-  const res = await apiService.searchAll({ q, faculty: user?.faculty || undefined });
-  setAssociations(res.results.associations || []);
-  setFaculties(res.results.faculties || []);
+        const res = await apiService.searchAll({ q, faculty: user?.faculty || undefined });
+        setAssociations(res.results.associations || []);
+        setFaculties(res.results.faculties || []);
       } finally {
         setLoading(false);
       }
@@ -67,13 +67,13 @@ const SearchResultsPage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
                 {faculties.map((f) => (
                   <Link key={f.slug} to={`/fakulteti/${f.slug}`} className="card" style={{ padding: '16px', border: '1px solid #eee', borderRadius: 8, textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap: 8 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#1e70bf', color:'#fff', display:'grid', placeItems:'center', fontWeight:700 }}>
-                        {(f.abbreviation || f.name?.split(' ').map(w => w[0]).slice(0,3).join('').toUpperCase())}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--primary-blue)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
+                        {(f.abbreviation || f.name?.split(' ').map(w => w[0]).slice(0, 3).join('').toUpperCase())}
                       </div>
                       <h3 style={{ margin: 0 }}>{f.name}</h3>
                     </div>
-                    {f.contacts?.address && <p style={{ margin: '8px 0 0', color:'#555' }}>{f.contacts.address}</p>}
+                    {f.contacts?.address && <p style={{ margin: '8px 0 0', color: '#555' }}>{f.contacts.address}</p>}
                   </Link>
                 ))}
               </div>

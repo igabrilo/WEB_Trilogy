@@ -54,7 +54,7 @@
 }
 
 .social-link:hover {
-   background: #0066CC;
+   background: var(--primary-blue);
    color: white;
    transform: translateY(-2px);
 }
@@ -82,7 +82,7 @@
 }
 
 .footer-links a:hover {
-   color: #0066CC;
+   color: var(--primary-blue);
 }
 
 .footer-bottom {
