@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import '../css/FeaturedJobs.css';
 
 interface Job {
@@ -12,6 +14,8 @@ interface Job {
 }
 
 const FeaturedJobs = () => {
+   const { isAuthenticated } = useAuth();
+   const navigate = useNavigate();
    const jobs: Job[] = [
       {
          id: 1,
@@ -90,7 +94,19 @@ const FeaturedJobs = () => {
                         </div>
                      </div>
                      <div className="job-salary">{job.salary}</div>
-                     <button className="job-apply-btn">Apply Now</button>
+                     <button 
+                        className="job-apply-btn"
+                        onClick={() => {
+                           if (isAuthenticated) {
+                              // TODO: Implementiraj prijavu na posao
+                              alert('Funkcija prijave će biti implementirana');
+                           } else {
+                              navigate('/prijava');
+                           }
+                        }}
+                     >
+                        {isAuthenticated ? 'Apply Now' : 'Apply Now (zahtijeva prijavu)'}
+                     </button>
                   </div>
                ))}
             </div>

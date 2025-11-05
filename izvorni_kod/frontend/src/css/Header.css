@@ -65,6 +65,13 @@
 .header-actions {
    display: flex;
    gap: 1rem;
+   align-items: center;
+}
+
+.user-greeting {
+   color: #4a5568;
+   font-weight: 500;
+   font-size: 0.875rem;
 }
 
 .btn-secondary {
@@ -76,6 +83,8 @@
    font-weight: 600;
    cursor: pointer;
    transition: all 0.2s;
+   text-decoration: none;
+   display: inline-block;
 }
 
 .btn-secondary:hover {
@@ -91,6 +100,8 @@
    font-weight: 600;
    cursor: pointer;
    transition: all 0.2s;
+   text-decoration: none;
+   display: inline-block;
 }
 
 .btn-primary:hover {

@@ -114,7 +114,7 @@ const Hero = () => {
                      <ul className="profile-features">
                         <li>Predefinirane prakse i poslovi</li>
                         <li>Erasmus projekti grupe</li>
-                        <li>Studentske usluge</li>
+                        <li>Studentske udruge</li>
                         <li>Profesionalni profili</li>
                      </ul>
                   </div>
@@ -132,7 +132,7 @@ const Hero = () => {
                      <ul className="profile-features">
                         <li>Pronađi poslove i projekte</li>
                         <li>Alumni mreža</li>
-                        <li>Mentorstvo studente</li>
+                        <li>Mentoriranje studenta</li>
                         <li>Dogadjanja i networking</li>
                      </ul>
                   </div>
