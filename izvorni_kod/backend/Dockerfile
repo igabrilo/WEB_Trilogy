@@ -1,5 +1,5 @@
 # Backend Dockerfile
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -7,7 +7,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+   pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -15,5 +16,8 @@ COPY . .
 # Expose port
 EXPOSE 5000
 
+# Set PYTHONPATH to include src directory
+ENV PYTHONPATH=/app/src:${PYTHONPATH}
+
 # Run the application
-CMD ["python", "app.py"]
+CMD ["python", "run.py"]

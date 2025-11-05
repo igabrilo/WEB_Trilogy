@@ -1,0 +1,24 @@
+{
+    "executionEnvironments": [
+        {
+            "root": "izvorni_kod/backend",
+            "pythonVersion": "3.9",
+            "pythonPlatform": "Darwin",
+            "venvPath": "izvorni_kod/backend",
+            "venv": ".venv",
+            "extraPaths": [
+                "izvorni_kod/backend",
+                "izvorni_kod/backend/.venv/lib/python3.9/site-packages"
+            ]
+        }
+    ],
+    "include": [
+        "izvorni_kod/backend/**/*.py"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        "**/.venv",
+        "**/venv"
+    ]
+}
+
