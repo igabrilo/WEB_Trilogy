@@ -1,0 +1,97 @@
+from flask import Flask, jsonify
+from flask_cors import CORS
+import os
+import warnings
+
+# Suppress known warnings
+warnings.filterwarnings('ignore', message='.*importlib.metadata.*packages_distributions.*')
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*Python version.*past its end of life.*')
+
+# Use absolute imports when src is in path, or relative imports when used as package
+try:
+    from config import config
+    from oauth2_service import OAuth2Service
+    from firebase_service import FirebaseService
+    from aai_service import AAIService
+    from chatbot_service import ChatbotService
+    from blueprints.auth import auth_bp, init_auth_routes
+    from blueprints.oauth import oauth_bp, init_oauth_routes
+    from blueprints.notifications import notifications_bp, init_notification_routes
+    from blueprints.aai import aai_bp, init_aai_routes
+    from blueprints.chatbot import chatbot_bp, init_chatbot_routes
+except ImportError:
+    # Fallback to relative imports if used as package
+    from .config import config
+    from .oauth2_service import OAuth2Service
+    from .firebase_service import FirebaseService
+    from .aai_service import AAIService
+    from .chatbot_service import ChatbotService
+    from .blueprints.auth import auth_bp, init_auth_routes
+    from .blueprints.oauth import oauth_bp, init_oauth_routes
+    from .blueprints.notifications import notifications_bp, init_notification_routes
+    from .blueprints.aai import aai_bp, init_aai_routes
+    from .blueprints.chatbot import chatbot_bp, init_chatbot_routes
+
+def create_app(config_name=None):
+    """Application factory pattern"""
+    app = Flask(__name__)
+    
+    # Load configuration
+    config_name = config_name or os.environ.get('FLASK_ENV', 'development')
+    app.config.from_object(config.get(config_name, config['default']))
+    
+    # Initialize CORS
+    CORS(app, resources={r"/api/*": {"origins": app.config.get('CORS_ORIGINS', '*')}})
+    
+    # Set session secret key for AAI redirects
+    app.secret_key = app.config.get('SESSION_SECRET_KEY', app.config.get('SECRET_KEY'))
+    
+    # Initialize services
+    oauth_service = OAuth2Service(app)
+    firebase_service = FirebaseService(app)
+    aai_service = AAIService(app)
+    chatbot_service = ChatbotService(app)
+    
+    # Initialize blueprints with services
+    init_auth_routes(oauth_service, firebase_service, aai_service)
+    init_oauth_routes(oauth_service, firebase_service)
+    init_notification_routes(oauth_service, firebase_service)
+    init_aai_routes(oauth_service, firebase_service, aai_service)
+    init_chatbot_routes(oauth_service, firebase_service, chatbot_service)
+    
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(oauth_bp)
+    app.register_blueprint(notifications_bp)
+    app.register_blueprint(aai_bp)
+    app.register_blueprint(chatbot_bp)
+    
+    # Root endpoint
+    @app.route("/")
+    def home():
+        return jsonify({
+            "message": "UNIZG Career Hub API",
+            "version": "1.0.0",
+            "endpoints": {
+                "auth": "/api/auth",
+                "oauth": "/api/oauth",
+                "notifications": "/api/notifications",
+                "aai": "/api/aai",
+                "chatbot": "/api/chatbot"
+            }
+        })
+    
+    # Health check endpoint
+    @app.route("/health")
+    def health():
+        return jsonify({
+            "status": "healthy",
+            "services": {
+                "oauth2": oauth_service.oauth is not None,
+                "firebase": firebase_service.initialized,
+                "chatbot": len(chatbot_service.get_available_providers()) > 0
+            }
+        })
+    
+    return app
+
