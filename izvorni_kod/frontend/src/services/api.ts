@@ -1,8 +1,8 @@
 // For browser requests, use localhost:5001 (host port mapping)
 // The VITE_API_URL env var is for Docker internal network (backend:5000)
 // But browser requests need to go through the host port
-const API_URL = import.meta.env.VITE_API_URL?.includes('localhost') 
-  ? import.meta.env.VITE_API_URL 
+const API_URL = import.meta.env.VITE_API_URL?.includes('localhost')
+  ? import.meta.env.VITE_API_URL
   : 'http://localhost:5001';
 
 export interface LoginCredentials {
@@ -26,8 +26,8 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
-   faculty?: string | null;
-   interests?: string[];
+  faculty?: string | null;
+  interests?: string[];
 }
 
 export interface AuthResponse {
@@ -35,6 +35,8 @@ export interface AuthResponse {
   message?: string;
   user?: User;
   token?: string;
+  requires_aai?: boolean;
+  aai_login_url?: string;
 }
 
 export interface Association {
@@ -98,7 +100,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -115,10 +117,27 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Special case: AAI redirect returns HTTP 200 with success: false
+      // We need to check this before throwing on !response.ok
+      if (data && data.requires_aai && !data.success) {
+        return data; // Return AAI redirect response without throwing
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'An error occurred');
+        // Backend returns error messages in different formats
+        const errorMessage = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       return data;
@@ -131,10 +150,28 @@ class ApiService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    try {
+      const response = await this.request<AuthResponse>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+
+      // Handle AAI redirect case (backend returns success: false but HTTP 200)
+      // This is a special case - don't throw, return the response so caller can handle
+      if (!response.success && response.requires_aai) {
+        return response;
+      }
+
+      // For successful login, ensure success is true
+      if (!response.success) {
+        throw new Error(response.message || 'Login failed');
+      }
+
+      return response;
+    } catch (error) {
+      // Re-throw to let caller handle
+      throw error;
+    }
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {

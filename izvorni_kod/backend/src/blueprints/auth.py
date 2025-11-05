@@ -199,6 +199,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
             else:
                 user_response = user.to_dict()
             
+            # Return user directly (not wrapped in success/message)
             return jsonify(user_response), 200
             
         except Exception as e:
