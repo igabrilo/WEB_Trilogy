@@ -21,40 +21,40 @@ const FeaturedJobs = () => {
          id: 1,
          title: "Software Engineer",
          company: "Tech Corp",
-         location: "Zagreb, Croatia",
-         type: "Full-time",
+         location: "Zagreb, Hrvatska",
+         type: "Puno radno vrijeme",
          salary: "€40,000 - €60,000",
-         posted: "2 days ago",
+         posted: "prije 2 dana",
          logo: "TC"
       },
       {
          id: 2,
          title: "Data Analyst",
          company: "Data Solutions",
-         location: "Remote",
-         type: "Full-time",
+         location: "Udaljeno",
+         type: "Puno radno vrijeme",
          salary: "€35,000 - €50,000",
-         posted: "3 days ago",
+         posted: "prije 3 dana",
          logo: "DS"
       },
       {
          id: 3,
          title: "UX Designer",
          company: "Design Studio",
-         location: "Zagreb, Croatia",
-         type: "Part-time",
+         location: "Zagreb, Hrvatska",
+         type: "Djelomično radno vrijeme",
          salary: "€30,000 - €45,000",
-         posted: "1 week ago",
+         posted: "prije 1 tjedan",
          logo: "DS"
       },
       {
          id: 4,
          title: "Marketing Manager",
          company: "Growth Co",
-         location: "Split, Croatia",
-         type: "Full-time",
+         location: "Split, Hrvatska",
+         type: "Puno radno vrijeme",
          salary: "€35,000 - €55,000",
-         posted: "5 days ago",
+         posted: "prije 5 dana",
          logo: "GC"
       }
    ];
@@ -63,9 +63,9 @@ const FeaturedJobs = () => {
       <section className="featured-jobs">
          <div className="container">
             <div className="section-header">
-               <h2 className="section-title">Featured Job Opportunities</h2>
+               <h2 className="section-title">Istaknute prilike za posao</h2>
                <p className="section-description">
-                  Explore the latest job openings from top companies
+                  Istraži najnovije otvorene pozicije od vodećih tvrtki
                </p>
             </div>
             <div className="jobs-grid">
@@ -105,13 +105,13 @@ const FeaturedJobs = () => {
                            }
                         }}
                      >
-                        {isAuthenticated ? 'Apply Now' : 'Apply Now (zahtijeva prijavu)'}
+                        {isAuthenticated ? 'Prijavi se' : 'Prijavi se (zahtijeva prijavu)'}
                      </button>
                   </div>
                ))}
             </div>
             <div className="view-all">
-               <button className="btn-view-all">View All Jobs</button>
+               <button className="btn-view-all">Prikaži sve poslove</button>
             </div>
          </div>
       </section>

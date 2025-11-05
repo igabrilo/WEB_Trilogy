@@ -15,41 +15,41 @@ const InternshipsJobsPage = () => {
          id: 1,
          title: 'Ljetna praksa - Software Development',
          company: 'Tech Solutions d.o.o.',
-         location: 'Zagreb, Croatia',
+         location: 'Zagreb, Hrvatska',
          duration: '3 mjeseca',
          type: 'Praksa',
          paid: true,
-         posted: '5 dana'
+         posted: 'prije 5 dana'
       },
       {
          id: 2,
          title: 'Marketing Internship',
          company: 'Digital Agency',
-         location: 'Remote',
+         location: 'Udaljeno',
          duration: '6 mjeseci',
          type: 'Praksa',
          paid: true,
-         posted: '2 dana'
+         posted: 'prije 2 dana'
       },
       {
          id: 3,
          title: 'Research Assistant',
          company: 'FER Research Lab',
-         location: 'Zagreb, Croatia',
+         location: 'Zagreb, Hrvatska',
          duration: '1 godina',
-         type: 'Part-time',
+         type: 'Djelomično radno vrijeme',
          paid: true,
-         posted: '1 tjedan'
+         posted: 'prije 1 tjedan'
       },
       {
          id: 4,
          title: 'UX/UI Design Internship',
          company: 'Creative Studio',
-         location: 'Zagreb, Croatia',
+         location: 'Zagreb, Hrvatska',
          duration: '3 mjeseca',
          type: 'Praksa',
          paid: false,
-         posted: '3 dana'
+         posted: 'prije 3 dana'
       }
    ];
 
@@ -94,8 +94,8 @@ const InternshipsJobsPage = () => {
                      <button className="filter-tab active">Sve</button>
                      <button className="filter-tab">Prakse</button>
                      <button className="filter-tab">Poslovi</button>
-                     <button className="filter-tab">Part-time</button>
-                     <button className="filter-tab">Remote</button>
+                     <button className="filter-tab">Djelomično radno vrijeme</button>
+                     <button className="filter-tab">Udaljeno</button>
                   </div>
                </div>
             </section>
