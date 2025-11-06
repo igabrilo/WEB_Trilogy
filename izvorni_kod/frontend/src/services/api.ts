@@ -190,6 +190,12 @@ class ApiService {
     localStorage.removeItem('user');
   }
 
+  async initiateGoogleLogin(): Promise<void> {
+    // Redirect to backend OAuth endpoint which will redirect to Google
+    const googleLoginUrl = `${this.baseURL}/api/oauth/login/google`;
+    window.location.href = googleLoginUrl;
+  }
+
   async getAssociations(params?: { faculty?: string; q?: string }): Promise<ListResponse<Association>> {
     const qs = new URLSearchParams();
     if (params?.faculty) qs.append('faculty', params.faculty);

@@ -19,6 +19,7 @@ try:
     from blueprints.notifications import notifications_bp, init_notification_routes
     from blueprints.aai import aai_bp, init_aai_routes
     from blueprints.chatbot import chatbot_bp, init_chatbot_routes
+    from blueprints.search import search_bp
 except ImportError:
     # Fallback to relative imports if used as package
     from .config import config
@@ -31,6 +32,7 @@ except ImportError:
     from .blueprints.notifications import notifications_bp, init_notification_routes
     from .blueprints.aai import aai_bp, init_aai_routes
     from .blueprints.chatbot import chatbot_bp, init_chatbot_routes
+    from .blueprints.search import search_bp
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -40,15 +42,15 @@ def create_app(config_name=None):
     config_name = config_name or os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config.get(config_name, config['default']))
     
+    # Set session secret key FIRST (required for OAuth and AAI redirects)
+    app.secret_key = app.config.get('SESSION_SECRET_KEY') or app.config.get('SECRET_KEY') or 'your-secret-key-change-in-production'
+    
     # Initialize CORS - allow all origins in development, specific origins in production
     cors_origins = app.config.get('CORS_ORIGINS', ['*'])
     if cors_origins == ['*'] or '*' in cors_origins:
         CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
     else:
         CORS(app, resources={r"/api/*": {"origins": cors_origins, "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
-    
-    # Set session secret key for AAI redirects
-    app.secret_key = app.config.get('SESSION_SECRET_KEY', app.config.get('SECRET_KEY'))
     
     # Initialize services
     oauth_service = OAuth2Service(app)
@@ -69,6 +71,7 @@ def create_app(config_name=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(aai_bp)
     app.register_blueprint(chatbot_bp)
+    app.register_blueprint(search_bp)
     
     # Root endpoint
     @app.route("/")
@@ -81,7 +84,10 @@ def create_app(config_name=None):
                 "oauth": "/api/oauth",
                 "notifications": "/api/notifications",
                 "aai": "/api/aai",
-                "chatbot": "/api/chatbot"
+                "chatbot": "/api/chatbot",
+                "search": "/api/search",
+                "associations": "/api/associations",
+                "faculties": "/api/faculties"
             }
         })
     
