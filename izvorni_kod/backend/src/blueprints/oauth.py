@@ -21,6 +21,12 @@ def init_oauth_routes(oauth_service, firebase_service):
         """Initiate OAuth2 login"""
         try:
             if provider == 'google':
+                if not oauth_service.oauth or not oauth_service.oauth.google:
+                    return jsonify({
+                        'success': False,
+                        'message': 'OAuth2 service not properly configured'
+                    }), 500
+                
                 redirect_uri = url_for('oauth.oauth_callback', provider='google', _external=True)
                 return oauth_service.oauth.google.authorize_redirect(redirect_uri)
             else:
@@ -29,6 +35,10 @@ def init_oauth_routes(oauth_service, firebase_service):
                     'message': f'Provider {provider} not supported'
                 }), 400
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"OAuth login error: {str(e)}")
+            print(f"Traceback: {error_details}")
             return jsonify({
                 'success': False,
                 'message': f'OAuth login failed: {str(e)}'

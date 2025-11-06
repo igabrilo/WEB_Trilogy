@@ -42,15 +42,15 @@ def create_app(config_name=None):
     config_name = config_name or os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config.get(config_name, config['default']))
     
+    # Set session secret key FIRST (required for OAuth and AAI redirects)
+    app.secret_key = app.config.get('SESSION_SECRET_KEY') or app.config.get('SECRET_KEY') or 'your-secret-key-change-in-production'
+    
     # Initialize CORS - allow all origins in development, specific origins in production
     cors_origins = app.config.get('CORS_ORIGINS', ['*'])
     if cors_origins == ['*'] or '*' in cors_origins:
         CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
     else:
         CORS(app, resources={r"/api/*": {"origins": cors_origins, "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
-    
-    # Set session secret key for AAI redirects
-    app.secret_key = app.config.get('SESSION_SECRET_KEY', app.config.get('SECRET_KEY'))
     
     # Initialize services
     oauth_service = OAuth2Service(app)
