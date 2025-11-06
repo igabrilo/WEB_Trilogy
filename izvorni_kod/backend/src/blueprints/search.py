@@ -1,4 +1,17 @@
 from flask import Blueprint, request, jsonify
+from typing import Optional
+
+# Support both absolute and relative imports
+try:
+    from blueprints.associations import ASSOCIATIONS_STORAGE
+    from blueprints.admin import FACULTIES_STORAGE
+except ImportError:
+    try:
+        from ..blueprints.associations import ASSOCIATIONS_STORAGE
+        from ..blueprints.admin import FACULTIES_STORAGE
+    except ImportError:
+        ASSOCIATIONS_STORAGE = []
+        FACULTIES_STORAGE = []
 
 search_bp = Blueprint('search', __name__, url_prefix='/api')
 
@@ -215,12 +228,15 @@ FACULTIES_DATA = [
     }
 ]
 
-def search_associations(query: str, faculty: str = None):
+def search_associations(query: str, faculty: Optional[str] = None):
     """Search associations by query and optionally filter by faculty"""
     query_lower = query.lower()
     results = []
     
-    for assoc in ASSOCIATIONS_DATA:
+    # Combine mock data with created associations
+    all_associations = ASSOCIATIONS_DATA + ASSOCIATIONS_STORAGE
+    
+    for assoc in all_associations:
         # Filter by faculty if specified
         if faculty and assoc.get('faculty') != faculty:
             continue
@@ -235,12 +251,15 @@ def search_associations(query: str, faculty: str = None):
     
     return results
 
-def search_faculties(query: str, faculty: str = None):
+def search_faculties(query: str, faculty: Optional[str] = None):
     """Search faculties by query"""
     query_lower = query.lower()
     results = []
     
-    for fac in FACULTIES_DATA:
+    # Combine mock data with created faculties
+    all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
+    
+    for fac in all_faculties:
         # Filter by faculty abbreviation if specified (for filtering by user's faculty)
         if faculty and fac.get('abbreviation') != faculty:
             continue
@@ -289,7 +308,8 @@ def get_associations():
     faculty = request.args.get('faculty', '').strip() or None
     query = request.args.get('q', '').strip() or None
     
-    results = ASSOCIATIONS_DATA
+    # Combine mock data with created associations
+    results = ASSOCIATIONS_DATA + ASSOCIATIONS_STORAGE
     
     # Filter by faculty
     if faculty:
@@ -308,6 +328,13 @@ def get_associations():
 @search_bp.route('/associations/<slug>', methods=['GET'])
 def get_association(slug):
     """Get a single association by slug"""
+    # Check in created associations first, then mock data
+    created_assoc = next((a for a in ASSOCIATIONS_STORAGE if a.get('slug') == slug), None)
+    if created_assoc:
+        return jsonify({
+            'success': True,
+            'item': created_assoc
+        }), 200
     association = next((a for a in ASSOCIATIONS_DATA if a.get('slug') == slug), None)
     
     if not association:
@@ -326,10 +353,21 @@ def get_faculties():
     """Get all faculties, optionally filtered by search query"""
     query = request.args.get('q', '').strip() or None
     
+    # Combine mock data with created faculties
+    all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
+    
     if query:
         results = search_faculties(query)
+        # Also search in created faculties
+        query_lower = query.lower()
+        for fac in FACULTIES_STORAGE:
+            name_match = query_lower in fac.get('name', '').lower()
+            abbrev_match = query_lower in fac.get('abbreviation', '').lower()
+            if name_match or abbrev_match:
+                if fac not in results:
+                    results.append(fac)
     else:
-        results = FACULTIES_DATA
+        results = all_faculties
     
     return jsonify({
         'success': True,
@@ -340,7 +378,10 @@ def get_faculties():
 @search_bp.route('/faculties/<slug>', methods=['GET'])
 def get_faculty(slug):
     """Get a single faculty by slug"""
-    faculty = next((f for f in FACULTIES_DATA if f.get('slug') == slug), None)
+    # Check in created faculties first, then mock data
+    faculty = next((f for f in FACULTIES_STORAGE if f.get('slug') == slug), None)
+    if not faculty:
+        faculty = next((f for f in FACULTIES_DATA if f.get('slug') == slug), None)
     
     if not faculty:
         return jsonify({

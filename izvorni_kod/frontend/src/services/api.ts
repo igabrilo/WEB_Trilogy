@@ -13,8 +13,9 @@ export interface LoginCredentials {
 export interface RegisterData {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string; // For employers and faculty
   role?: string;
   faculty?: string;
   interests?: string[];
@@ -25,6 +26,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  username?: string; // For employers and faculty
   role: string;
   faculty?: string | null;
   interests?: string[];
@@ -225,6 +227,157 @@ class ApiService {
   async getFaculty(slug: string): Promise<ItemResponse<Faculty>> {
     return this.request<ItemResponse<Faculty>>(`/api/faculties/${slug}`);
   }
+
+  // Associations management (for faculty)
+  async createAssociation(data: {
+    name: string;
+    faculty: string;
+    shortDescription: string;
+    description?: string;
+    type?: string;
+    logoText?: string;
+    logoBg?: string;
+    tags?: string[];
+    links?: Record<string, string>;
+  }): Promise<ItemResponse<Association>> {
+    return this.request<ItemResponse<Association>>('/api/associations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Jobs/Internships management (for employers)
+  async createJob(data: {
+    title: string;
+    description: string;
+    type: 'internship' | 'job' | 'part-time' | 'remote';
+    company?: string;
+    location?: string;
+    salary?: string;
+    requirements?: string[];
+    tags?: string[];
+  }): Promise<ItemResponse<Job>> {
+    return this.request<ItemResponse<Job>>('/api/jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getJobs(params?: { type?: string; q?: string }): Promise<ListResponse<Job>> {
+    const qs = new URLSearchParams();
+    if (params?.type) qs.append('type', params.type);
+    if (params?.q) qs.append('q', params.q);
+    const qp = qs.toString();
+    return this.request<ListResponse<Job>>(`/api/jobs${qp ? `?${qp}` : ''}`);
+  }
+
+  async applyToJob(jobId: number, message?: string): Promise<ItemResponse<JobApplication>> {
+    return this.request<ItemResponse<JobApplication>>(`/api/jobs/${jobId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  }
+
+  async getJobApplications(jobId?: number): Promise<ListResponse<JobApplication>> {
+    const endpoint = jobId ? `/api/jobs/${jobId}/applications` : '/api/jobs/applications';
+    return this.request<ListResponse<JobApplication>>(endpoint);
+  }
+
+  async updateApplicationStatus(applicationId: number, status: 'pending' | 'approved' | 'rejected'): Promise<ItemResponse<JobApplication>> {
+    return this.request<ItemResponse<JobApplication>>(`/api/jobs/applications/${applicationId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async sendEmailToApplicant(applicationId: number, subject: string, message: string): Promise<{ success: boolean; message: string; email: any }> {
+    return this.request(`/api/jobs/applications/${applicationId}/send-email`, {
+      method: 'POST',
+      body: JSON.stringify({ subject, message }),
+    });
+  }
+
+  // Admin endpoints
+  async createFaculty(data: {
+    name: string;
+    type: 'faculty' | 'academy';
+    abbreviation?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+  }): Promise<ItemResponse<Faculty>> {
+    return this.request<ItemResponse<Faculty>>('/api/admin/faculties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAllFaculties(): Promise<ListResponse<Faculty>> {
+    return this.request<ListResponse<Faculty>>('/api/admin/faculties');
+  }
+
+  async updateFaculty(slug: string, data: Partial<Faculty>): Promise<ItemResponse<Faculty>> {
+    return this.request<ItemResponse<Faculty>>(`/api/admin/faculties/${slug}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFaculty(slug: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/admin/faculties/${slug}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAllAssociations(): Promise<ListResponse<Association>> {
+    return this.request<ListResponse<Association>>('/api/admin/associations');
+  }
+
+  async updateAssociation(associationId: number, data: Partial<Association>): Promise<ItemResponse<Association>> {
+    return this.request<ItemResponse<Association>>(`/api/admin/associations/${associationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAssociation(associationId: number): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/admin/associations/${associationId}`, {
+      method: 'DELETE',
+    });
+  }
+}
+
+export interface Job {
+  id: number;
+  title: string;
+  description: string;
+  type: 'internship' | 'job' | 'part-time' | 'remote';
+  company?: string;
+  location?: string;
+  salary?: string;
+  requirements?: string[];
+  tags?: string[];
+  createdAt?: string;
+  status?: string;
+  applicationCount?: number;
+}
+
+export interface JobApplication {
+  id: number;
+  jobId: number;
+  userId: number;
+  userEmail: string;
+  message?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt?: string;
+  updatedAt?: string;
+  user?: User;
+  job?: {
+    id: number;
+    title: string;
+    type: string;
+  };
 }
 
 export const apiService = new ApiService();

@@ -25,13 +25,29 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
         try:
             data = request.get_json()
             
-            # Validate required fields
-            required_fields = ['email', 'password', 'firstName', 'lastName']
-            for field in required_fields:
-                if field not in data or not data[field]:
+            # Validate required fields based on role
+            requested_role = data.get('role', 'student')
+            is_institutional = requested_role in ['employer', 'poslodavac', 'faculty', 'fakultet']
+            
+            # Check basic required fields
+            if not data.get('email') or not data.get('password'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Email and password are required'
+                }), 400
+            
+            # For institutional roles, require username; for others, require firstName/lastName
+            if is_institutional:
+                if not data.get('username'):
                     return jsonify({
                         'success': False,
-                        'message': f'Field {field} is required'
+                        'message': 'Korisničko ime je obavezno'
+                    }), 400
+            else:
+                if not data.get('firstName') or not data.get('lastName'):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Ime i prezime su obavezni'
                     }), 400
             
             # Check if user already exists
@@ -49,15 +65,43 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'message': 'Password must be at least 6 characters long'
                 }), 400
             
+            # Validate role-specific requirements
+            email = data['email']
+            
+            # If registering as faculty, email must be from faculty domain
+            if requested_role in ['faculty', 'fakultet']:
+                if not is_faculty_email(email):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Fakulteti se moraju registrirati s email adresom s fakultetske domene'
+                    }), 400
+            
+            # If email is from faculty domain but role is not faculty, suggest faculty role
+            if is_faculty_email(email) and requested_role not in ['faculty', 'fakultet']:
+                return jsonify({
+                    'success': False,
+                    'message': 'Email adresa s fakultetske domene zahtijeva registraciju kao fakultet. Fakulteti se prijavljuju preko AAI@EduHr sustava.'
+                }), 400
+            
             # Create new user
-            new_user = User.create({
+            user_data = {
                 'email': data['email'],
                 'password': data['password'],
-                'firstName': data['firstName'],
-                'lastName': data['lastName'],
-                'role': data.get('role', 'student'),
+                'role': requested_role,
                 'provider': 'local'
-            })
+            }
+            
+            if is_institutional:
+                user_data['username'] = data['username']
+            else:
+                user_data['firstName'] = data['firstName']
+                user_data['lastName'] = data['lastName']
+                if 'faculty' in data:
+                    user_data['faculty'] = data['faculty']
+                if 'interests' in data:
+                    user_data['interests'] = data['interests']
+            
+            new_user = User.create(user_data)
             
             # Generate JWT token
             token = oauth_service.generate_token(
@@ -92,6 +136,67 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 }), 400
             
             email = data['email']
+            
+            # Check if this is admin login
+            ADMIN_EMAIL = 'ivan.gabrilo@gmail.com'
+            ADMIN_PASSWORD = 'ivan55'
+            
+            if email == ADMIN_EMAIL:
+                # Admin login - check password
+                if not data.get('password'):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Password is required'
+                    }), 400
+                
+                if data['password'] != ADMIN_PASSWORD:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Invalid email or password'
+                    }), 401
+                
+                # Find or create admin user
+                admin_user = User.find_by_email(ADMIN_EMAIL)
+                if not admin_user:
+                    # Create admin user if doesn't exist
+                    admin_user = User.create({
+                        'email': ADMIN_EMAIL,
+                        'password': ADMIN_PASSWORD,
+                        'firstName': 'Admin',
+                        'lastName': 'User',
+                        'role': 'admin',
+                        'provider': 'local'
+                    })
+                
+                # Ensure user has admin role and get user data
+                if isinstance(admin_user, dict):
+                    admin_user['role'] = 'admin'
+                    user_id = admin_user['id']
+                    user_response = {
+                        'id': admin_user['id'],
+                        'email': admin_user['email'],
+                        'firstName': admin_user.get('firstName', 'Admin'),
+                        'lastName': admin_user.get('lastName', 'User'),
+                        'role': 'admin'
+                    }
+                else:
+                    admin_user.role = 'admin'
+                    user_id = admin_user.id
+                    user_response = admin_user.to_dict()
+                
+                # Generate token
+                token = oauth_service.generate_token(
+                    user_id,
+                    ADMIN_EMAIL,
+                    'admin'
+                )
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Login successful',
+                    'user': user_response,
+                    'token': token
+                }), 200
             
             # Check if email is from a faculty domain
             if is_faculty_email(email):

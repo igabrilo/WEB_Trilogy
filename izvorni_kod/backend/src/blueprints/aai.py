@@ -90,15 +90,27 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
                         user_role = existing_user.role
                 else:
                     # Create new user from AAI
-                    new_user = User.create({
+                    # If email is from faculty domain, set role to faculty
+                    from utils import is_faculty_email
+                    default_role = 'faculty' if is_faculty_email(user_info['email']) else user_info.get('role', 'student')
+                    
+                    # For faculty, use firstName as username (institutional name)
+                    user_data = {
                         'email': user_info['email'],
                         'password': None,  # No password for AAI users
-                        'firstName': user_info['firstName'],
-                        'lastName': user_info['lastName'],
-                        'role': user_info.get('role', 'student'),
+                        'role': default_role,
                         'provider': 'aai',
                         'provider_id': user_info['provider_id']
-                    })
+                    }
+                    
+                    if default_role == 'faculty':
+                        # For faculty, use firstName as username
+                        user_data['username'] = user_info.get('firstName', user_info.get('email', '').split('@')[0])
+                    else:
+                        user_data['firstName'] = user_info.get('firstName', '')
+                        user_data['lastName'] = user_info.get('lastName', '')
+                    
+                    new_user = User.create(user_data)
                     
                     user_id = new_user.id
                     user_email = new_user.email

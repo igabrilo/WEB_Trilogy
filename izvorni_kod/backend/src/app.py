@@ -20,6 +20,9 @@ try:
     from blueprints.aai import aai_bp, init_aai_routes
     from blueprints.chatbot import chatbot_bp, init_chatbot_routes
     from blueprints.search import search_bp
+    from blueprints.associations import associations_bp, init_associations_routes
+    from blueprints.jobs import jobs_bp, init_jobs_routes
+    from blueprints.admin import admin_bp, init_admin_routes
 except ImportError:
     # Fallback to relative imports if used as package
     from .config import config
@@ -33,6 +36,9 @@ except ImportError:
     from .blueprints.aai import aai_bp, init_aai_routes
     from .blueprints.chatbot import chatbot_bp, init_chatbot_routes
     from .blueprints.search import search_bp
+    from .blueprints.associations import associations_bp, init_associations_routes
+    from .blueprints.jobs import jobs_bp, init_jobs_routes
+    from .blueprints.admin import admin_bp, init_admin_routes
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -64,6 +70,9 @@ def create_app(config_name=None):
     init_notification_routes(oauth_service, firebase_service)
     init_aai_routes(oauth_service, firebase_service, aai_service)
     init_chatbot_routes(oauth_service, firebase_service, chatbot_service)
+    init_associations_routes(oauth_service)
+    init_jobs_routes(oauth_service)
+    init_admin_routes(oauth_service)
     
     # Register blueprints
     app.register_blueprint(auth_bp)
@@ -72,6 +81,9 @@ def create_app(config_name=None):
     app.register_blueprint(aai_bp)
     app.register_blueprint(chatbot_bp)
     app.register_blueprint(search_bp)
+    app.register_blueprint(associations_bp)
+    app.register_blueprint(jobs_bp)
+    app.register_blueprint(admin_bp)
     
     # Root endpoint
     @app.route("/")
