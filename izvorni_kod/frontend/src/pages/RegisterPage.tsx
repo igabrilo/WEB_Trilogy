@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import type { RegisterData } from '../services/api';
 import '../css/RegisterPage.css';
+import '../css/Hero.css';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { register } = useAuth();
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
@@ -19,9 +21,24 @@ const RegisterPage = () => {
     faculty: 'FER',
     interests: [],
   });
+  const selectedRole = useMemo(() => (params.get('role') || '').toLowerCase(), [params]);
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const ROLE_LABELS: Record<string, string> = {
+    ucenik: 'Učenik',
+    student: 'Student',
+    alumni: 'Alumni',
+    employer: 'Poslodavac',
+    faculty: 'Fakultet',
+  };
+  const roleLabel = useMemo(() => (selectedRole ? ROLE_LABELS[selectedRole] || '' : ''), [selectedRole]);
+
+  useEffect(() => {
+    if (selectedRole) {
+      setFormData((prev) => ({ ...prev, role: selectedRole }));
+    }
+  }, [selectedRole]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -41,9 +58,10 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      await register(formData);
-      // Redirect to home page on successful registration
-      navigate('/');
+  await register(formData);
+  // Redirect to role-specific landing
+  const role = formData.role || selectedRole || 'student';
+  navigate(`/profil/${role}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Došlo je do greške tijekom registracije');
     } finally {
@@ -73,7 +91,7 @@ const RegisterPage = () => {
       <main className="register-main">
         <section className="register-hero">
           <div className="register-hero-container fade-in">
-            <h1 className="register-hero-title slide-up">Registracija</h1>
+            <h1 className="register-hero-title slide-up">{selectedRole ? `Registracija — ${roleLabel}` : 'Registracija — odaberite kategoriju'}</h1>
             <p className="register-hero-subtitle slide-up" style={{ animationDelay: '0.1s' }}>
               Kreirajte svoj račun i započnite svoju karijeru već danas
             </p>
@@ -81,8 +99,37 @@ const RegisterPage = () => {
         </section>
 
         <section className="register-content">
+          {!selectedRole && (
+            <div className="profile-selection-container auth-profile-picker" style={{ marginBottom: 24 }}>
+              <div className="profile-grid">
+                {(['ucenik','student','alumni','employer','faculty'] as const).map((r) => (
+                  <div
+                    key={r}
+                    className="profile-card animate-in"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/registracija?role=${r}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/registracija?role=${r}`); }}
+                  >
+                    <div className="profile-icon blue-icon">
+                      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <circle cx="24" cy="24" r="10" stroke="currentColor" strokeWidth="2.5" />
+                      </svg>
+                    </div>
+                    <h3 className="profile-card-title">{ROLE_LABELS[r]}</h3>
+                    <p className="profile-card-subtitle">Odaberite {ROLE_LABELS[r].toLowerCase()} profil</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="register-container">
             <div className="register-card slide-up" style={{ animationDelay: '0.2s' }}>
+              {selectedRole && (
+                <div className="info-banner" style={{ marginBottom: 16, fontWeight: 500 }}>
+                  Registrirate se kao: {roleLabel}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="register-form">
                 {error && (
                   <div className="error-message">
@@ -146,6 +193,7 @@ const RegisterPage = () => {
                     value={formData.role}
                     onChange={handleChange}
                     className="form-input"
+                    disabled={!!selectedRole}
                   >
                     <option value="student">Student</option>
                     <option value="alumni">Alumni</option>
@@ -253,7 +301,7 @@ const RegisterPage = () => {
 
                 <p className="login-prompt">
                   Već imate račun?{' '}
-                  <Link to="/prijava" className="login-link">
+                  <Link to={`/prijava${selectedRole ? `?role=${selectedRole}` : ''}`} className="login-link">
                     Prijavite se
                   </Link>
                 </p>

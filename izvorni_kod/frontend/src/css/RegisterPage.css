@@ -72,6 +72,18 @@
   padding: 3rem 2rem;
 }
 
+/* Ensure auth category picker cards are visible on register page */
+.auth-profile-picker {
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.auth-profile-picker .profile-card {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 .register-container {
   max-width: 600px;
   margin: 0 auto;

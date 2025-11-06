@@ -11,7 +11,7 @@ const Hero = () => {
    const [assocResults, setAssocResults] = useState<Association[]>([]);
    const [facultyResults, setFacultyResults] = useState<Faculty[]>([]);
    const [loading, setLoading] = useState(false);
-   const [open, setOpen] = useState(false); // legacy state from dropdown; kept for focus behavior
+   const [_open, setOpen] = useState(false); // legacy state from dropdown; kept for focus behavior
    const suggestBoxRef = useRef<HTMLDivElement>(null);
    const navigate = useNavigate();
    const { user } = useAuth();
@@ -214,7 +214,7 @@ const Hero = () => {
                <p className="profile-section-subtitle">Prilagođeno iskustvo za svaku vrstu korisnika</p>
 
                   <div className="profile-grid" ref={profileCardsRef}>
-                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/profil/ucenik')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/profil/ucenik'); }}>
+                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/prijava?role=ucenik')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/prijava?role=ucenik'); }}>
                      <div className="profile-icon blue-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                            <path d="M24 24c4.4 0 8-3.6 8-8s-3.6-8-8-8-8 3.6-8 8 3.6 8 8 8zm0 4c-5.3 0-16 2.7-16 8v4h32v-4c0-5.3-10.7-8-16-8z" fill="currentColor" />
@@ -231,7 +231,7 @@ const Hero = () => {
                      </ul>
                   </div>
 
-                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/profil/student')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/profil/student'); }}>
+                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/prijava?role=student')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/prijava?role=student'); }}>
                      <div className="profile-icon blue-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                            <circle cx="24" cy="16" r="6" stroke="currentColor" strokeWidth="2.5" />
@@ -249,7 +249,7 @@ const Hero = () => {
                      </ul>
                   </div>
 
-                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/profil/alumni')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/profil/alumni'); }}>
+                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/prijava?role=alumni')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/prijava?role=alumni'); }}>
                      <div className="profile-icon blue-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                            <circle cx="24" cy="16" r="6" stroke="currentColor" strokeWidth="2.5" />
@@ -267,7 +267,7 @@ const Hero = () => {
                      </ul>
                   </div>
 
-                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/profil/poslodavac')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/profil/poslodavac'); }}>
+                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/prijava?role=employer')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/prijava?role=employer'); }}>
                      <div className="profile-icon blue-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                            <rect x="8" y="14" width="32" height="24" rx="2" stroke="currentColor" strokeWidth="2.5" />
@@ -286,7 +286,7 @@ const Hero = () => {
                      </ul>
                   </div>
 
-                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/profil/fakultet')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/profil/fakultet'); }}>
+                  <div className="profile-card" role="button" tabIndex={0} onClick={() => navigate('/prijava?role=faculty')} onKeyDown={(e) => { if (e.key==='Enter') navigate('/prijava?role=faculty'); }}>
                      <div className="profile-icon blue-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                            <rect x="8" y="10" width="32" height="28" rx="2" stroke="currentColor" strokeWidth="2.5" />

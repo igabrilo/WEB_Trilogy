@@ -8,6 +8,7 @@ import ProfilePage from './pages/ProfilePage';
 import ResourcesPage from './pages/ResourcesPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import SelectCategoryPage from './pages/SelectCategoryPage';
 import AssociationsPage from './pages/AssociationsPage';
 import AssociationDetailPage from './pages/AssociationDetailPage';
 import SearchResultsPage from './pages/SearchResultsPage';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/resursi" element={<ResourcesPage />} />
           <Route path="/prijava" element={<LoginPage />} />
           <Route path="/registracija" element={<RegisterPage />} />
+          <Route path="/odabir-kategorije" element={<SelectCategoryPage />} />
           <Route path="/udruge" element={<AssociationsPage />} />
           <Route path="/udruge/:slug" element={<AssociationDetailPage />} />
           <Route path="/fakulteti/:slug" element={<FacultyDetailPage />} />

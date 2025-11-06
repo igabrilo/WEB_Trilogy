@@ -72,6 +72,18 @@
   padding: 3rem 2rem;
 }
 
+/* Ensure auth category picker cards are visible on login page */
+.auth-profile-picker {
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.auth-profile-picker .profile-card {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 .login-container {
   max-width: 500px;
   margin: 0 auto;

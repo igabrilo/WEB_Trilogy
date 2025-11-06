@@ -56,8 +56,8 @@ const Header = () => {
                   </>
                ) : (
                   <>
-                     <Link to="/prijava" className="btn-secondary">Prijava</Link>
-                     <Link to="/registracija" className="btn-primary">Registracija</Link>
+                     <Link to="/odabir-kategorije?intent=login" className="btn-secondary">Prijava</Link>
+                     <Link to="/odabir-kategorije?intent=register" className="btn-primary">Registracija</Link>
                   </>
                )}
             </div>

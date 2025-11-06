@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { apiService, type LoginCredentials } from '../services/api';
 import '../css/LoginPage.css';
+import '../css/Hero.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,6 +19,16 @@ const LoginPage = () => {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
+
+  const selectedRole = (searchParams.get('role') || '').toLowerCase();
+  const ROLE_LABELS: Record<string, string> = {
+    ucenik: 'Učenik',
+    student: 'Student',
+    alumni: 'Alumni',
+    employer: 'Poslodavac',
+    faculty: 'Fakultet',
+  };
+  const roleLabel = useMemo(() => (selectedRole ? ROLE_LABELS[selectedRole] || '' : ''), [selectedRole]);
 
   // Handle OAuth callback if token is in URL
   useEffect(() => {
@@ -45,7 +56,18 @@ const LoginPage = () => {
           refreshUser().then(() => {
             // Clean URL and redirect
             window.history.replaceState({}, '', '/prijava');
-            navigate('/');
+            // After OAuth, send user to their profile landing if available
+            try {
+              const stored = localStorage.getItem('user');
+              if (stored) {
+                const u = JSON.parse(stored);
+                if (u?.role) {
+                  navigate(`/profil/${u.role}`);
+                  return;
+                }
+              }
+            } catch {}
+            navigate('/')
           }).catch(() => {
             // Even if refresh fails, redirect
             window.history.replaceState({}, '', '/prijava');
@@ -78,8 +100,18 @@ const LoginPage = () => {
       // If we get here, it's a successful login (AAI check passed or not needed)
       // Use the AuthContext login which handles token storage
       await login(formData);
-      // Redirect to home page on successful login
-      navigate('/');
+      // Redirect to role-specific landing if possible
+      try {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u?.role) {
+            navigate(`/profil/${u.role}`);
+            return;
+          }
+        }
+      } catch {}
+      navigate(selectedRole ? `/profil/${selectedRole}` : '/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
@@ -111,7 +143,9 @@ const LoginPage = () => {
       <main className="login-main">
         <section className="login-hero">
           <div className="login-hero-container fade-in">
-            <h1 className="login-hero-title slide-up">Prijava</h1>
+            <h1 className="login-hero-title slide-up">
+              {selectedRole ? `Prijava — ${roleLabel}` : 'Prijava — odaberite kategoriju'}
+            </h1>
             <p className="login-hero-subtitle slide-up" style={{ animationDelay: '0.1s' }}>
               Prijavite se na svoj račun da biste pristupili svim funkcijama
             </p>
@@ -119,8 +153,37 @@ const LoginPage = () => {
         </section>
 
         <section className="login-content">
+          {!selectedRole && (
+            <div className="profile-selection-container auth-profile-picker" style={{ marginBottom: 24 }}>
+              <div className="profile-grid">
+                {(['ucenik','student','alumni','employer','faculty'] as const).map((r) => (
+                  <div
+                    key={r}
+                    className="profile-card animate-in"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/prijava?role=${r}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/prijava?role=${r}`); }}
+                  >
+                    <div className="profile-icon blue-icon">
+                      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <circle cx="24" cy="24" r="10" stroke="currentColor" strokeWidth="2.5" />
+                      </svg>
+                    </div>
+                    <h3 className="profile-card-title">{ROLE_LABELS[r]}</h3>
+                    <p className="profile-card-subtitle">Odaberite {ROLE_LABELS[r].toLowerCase()} profil</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="login-container">
             <div className="login-card slide-up" style={{ animationDelay: '0.2s' }}>
+              {selectedRole && (
+                <div className="info-banner" style={{ marginBottom: 16, fontWeight: 500 }}>
+                  Prijavljujete se kao: {roleLabel}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="login-form">
                 {error && (
                   <div className="error-message">
@@ -223,7 +286,7 @@ const LoginPage = () => {
 
                 <p className="register-prompt">
                   Nemate račun?{' '}
-                  <Link to="/registracija" className="register-link">
+                  <Link to={`/registracija${selectedRole ? `?role=${selectedRole}` : ''}`} className="register-link">
                     Registrirajte se
                   </Link>
                 </p>
