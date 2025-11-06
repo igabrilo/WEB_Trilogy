@@ -19,6 +19,7 @@ try:
     from blueprints.notifications import notifications_bp, init_notification_routes
     from blueprints.aai import aai_bp, init_aai_routes
     from blueprints.chatbot import chatbot_bp, init_chatbot_routes
+    from blueprints.search import search_bp
 except ImportError:
     # Fallback to relative imports if used as package
     from .config import config
@@ -31,6 +32,7 @@ except ImportError:
     from .blueprints.notifications import notifications_bp, init_notification_routes
     from .blueprints.aai import aai_bp, init_aai_routes
     from .blueprints.chatbot import chatbot_bp, init_chatbot_routes
+    from .blueprints.search import search_bp
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -69,6 +71,7 @@ def create_app(config_name=None):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(aai_bp)
     app.register_blueprint(chatbot_bp)
+    app.register_blueprint(search_bp)
     
     # Root endpoint
     @app.route("/")
@@ -81,7 +84,10 @@ def create_app(config_name=None):
                 "oauth": "/api/oauth",
                 "notifications": "/api/notifications",
                 "aai": "/api/aai",
-                "chatbot": "/api/chatbot"
+                "chatbot": "/api/chatbot",
+                "search": "/api/search",
+                "associations": "/api/associations",
+                "faculties": "/api/faculties"
             }
         })
     

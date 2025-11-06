@@ -57,11 +57,11 @@ const Hero = () => {
    // Fetch suggestions with debounce when query changes
    useEffect(() => {
       const q = query.trim();
-      const reserved = ['student', 'alumni', 'praksa', 'posao'];
-      if (!q || q.length < 2 || reserved.includes(q.toLowerCase())) {
+      // Only search if query is at least 2 characters
+      if (!q || q.length < 2) {
          setAssocResults([]);
          setFacultyResults([]);
-         setOpen(false); // not used for inline, but keep state consistent
+         setOpen(false);
          return;
       }
       setLoading(true);
@@ -72,6 +72,7 @@ const Hero = () => {
             setFacultyResults(res.results.faculties || []);
             setOpen(true);
          } catch (e) {
+            console.error('Search error:', e);
             setAssocResults([]);
             setFacultyResults([]);
             setOpen(false);

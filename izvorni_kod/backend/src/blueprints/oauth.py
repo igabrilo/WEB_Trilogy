@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, redirect, url_for, session
+import json
 
 # Support both absolute and relative imports
 try:
@@ -41,10 +42,10 @@ def init_oauth_routes(oauth_service, firebase_service):
                 user_info = oauth_service.handle_callback('google')
                 
                 if not user_info:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Failed to authenticate with OAuth provider'
-                    }), 400
+                    import urllib.parse
+                    frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
+                    redirect_url = f"{frontend_url}/prijava?error=oauth_failed"
+                    return redirect(redirect_url)
                 
                 # Check if user exists by provider
                 existing_user = User.find_by_provider('google', user_info['provider_id'])
@@ -65,10 +66,11 @@ def init_oauth_routes(oauth_service, firebase_service):
                     
                     if existing_user:
                         # User exists with this email but different provider
-                        return jsonify({
-                            'success': False,
-                            'message': 'An account with this email already exists. Please use email/password login.'
-                        }), 400
+                        import urllib.parse
+                        frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
+                        error_msg = urllib.parse.quote('An account with this email already exists. Please use email/password login.')
+                        redirect_url = f"{frontend_url}/prijava?error={error_msg}"
+                        return redirect(redirect_url)
                     
                     # Create new user
                     new_user = User.create({
@@ -88,19 +90,21 @@ def init_oauth_routes(oauth_service, firebase_service):
                 # Generate JWT token
                 token = oauth_service.generate_token(user_id, user_email, user_role)
                 
-                # Return success with token (frontend should handle redirect)
-                return jsonify({
-                    'success': True,
-                    'message': 'OAuth login successful',
-                    'user': {
-                        'id': user_id,
-                        'email': user_email,
-                        'firstName': user_info['firstName'],
-                        'lastName': user_info['lastName'],
-                        'role': user_role
-                    },
-                    'token': token
-                }), 200
+                # Prepare user data for frontend
+                user_data = {
+                    'id': user_id,
+                    'email': user_email,
+                    'firstName': user_info['firstName'],
+                    'lastName': user_info['lastName'],
+                    'role': user_role
+                }
+                
+                # Redirect to frontend with token and user data in URL
+                import urllib.parse
+                frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
+                user_json = urllib.parse.quote(json.dumps(user_data))
+                redirect_url = f"{frontend_url}/prijava?token={token}&user={user_json}"
+                return redirect(redirect_url)
             else:
                 return jsonify({
                     'success': False,
@@ -108,8 +112,9 @@ def init_oauth_routes(oauth_service, firebase_service):
                 }), 400
                 
         except Exception as e:
-            return jsonify({
-                'success': False,
-                'message': f'OAuth callback failed: {str(e)}'
-            }), 500
+            import urllib.parse
+            frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
+            error_msg = urllib.parse.quote(f'OAuth callback failed: {str(e)}')
+            redirect_url = f"{frontend_url}/prijava?error={error_msg}"
+            return redirect(redirect_url)
 
