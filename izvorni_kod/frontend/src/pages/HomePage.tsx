@@ -1,54 +1,64 @@
-import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService, type Association } from '../services/api';
+import StudentDashboard from './dashboards/StudentDashboard';
+import AlumniDashboard from './dashboards/AlumniDashboard';
+import UcenikDashboard from './dashboards/UcenikDashboard';
+import EmployerDashboard from './dashboards/EmployerDashboard';
+import FacultyDashboard from './dashboards/FacultyDashboard';
+import AdminDashboard from './dashboards/AdminDashboard';
 
 const HomePage = () => {
-   const { isAuthenticated, user } = useAuth();
-   const [associations, setAssociations] = useState<Association[]>([]);
+   const { isAuthenticated, user, isLoading } = useAuth();
 
-   useEffect(() => {
-      const load = async () => {
-         if (isAuthenticated && (user?.role === 'student' || user?.role === 'alumni' || user?.role === 'ucenik')) {
-            const res = await apiService.getAssociations({ faculty: user?.faculty || undefined });
-            let items = res.items;
-            if (user?.interests && user.interests.length > 0) {
-               const interestsLower = user.interests.map(i => i.toLowerCase());
-               items = items.sort((a, b) => {
-                  const at = (a.tags || []).map(t => t.toLowerCase());
-                  const bt = (b.tags || []).map(t => t.toLowerCase());
-                  const am = at.some(t => interestsLower.includes(t)) ? 1 : 0;
-                  const bm = bt.some(t => interestsLower.includes(t)) ? 1 : 0;
-                  return bm - am; // put matches first
-               });
-            }
-            setAssociations(items.slice(0, 4));
-         } else {
-            setAssociations([]);
-         }
-      };
-      load();
-   }, [isAuthenticated, user?.role, user?.faculty]);
+   // Show loading state while checking authentication
+   if (isLoading) {
+      return (
+         <div className="home-page">
+            <Header />
+            <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <div>Učitavanje...</div>
+            </main>
+            <Footer />
+         </div>
+      );
+   }
 
+   // If user is authenticated, show role-specific dashboard
+   if (isAuthenticated && user) {
+      switch (user.role) {
+         case 'student':
+            return <StudentDashboard />;
+         case 'alumni':
+            return <AlumniDashboard />;
+         case 'ucenik':
+            return <UcenikDashboard />;
+         case 'employer':
+         case 'poslodavac':
+            return <EmployerDashboard />;
+         case 'faculty':
+         case 'fakultet':
+            return <FacultyDashboard />;
+         case 'admin':
+            return <AdminDashboard />;
+         default:
+            // Unknown role, show generic home
+            return (
+               <div className="home-page">
+                  <Header />
+                  <Hero />
+                  <Footer />
+               </div>
+            );
+      }
+   }
+
+   // Not authenticated - show generic home page
    return (
       <div className="home-page">
          <Header />
          <Hero />
-         {associations.length > 0 && (
-            <section className="container" style={{ padding: '2rem 1rem' }}>
-               <h2 style={{ marginBottom: 12 }}>Preporučene studentske udruge {user?.faculty ? `za ${user.faculty}` : ''}</h2>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-                  {associations.map((a) => (
-                     <a key={a.id} href={`/udruge/${a.slug}`} style={{ padding: 16, border: '1px solid #eee', borderRadius: 8, textDecoration: 'none', color: 'inherit' }}>
-                        <h3 style={{ margin: '0 0 8px' }}>{a.name}</h3>
-                        {a.shortDescription && <p style={{ margin: 0, color: '#555' }}>{a.shortDescription}</p>}
-                     </a>
-                  ))}
-               </div>
-            </section>
-         )}
          <Footer />
       </div>
    );

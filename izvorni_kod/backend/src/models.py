@@ -17,14 +17,21 @@ fcm_tokens_db = []  # Store FCM tokens: {user_id: int, fcm_token: str, device_in
 class User:
     """User model"""
     
-    def __init__(self, email, password, firstName, lastName, role='student', provider='local', provider_id=None):
+    def __init__(self, email, password, firstName=None, lastName=None, username=None, role='student', provider='local', provider_id=None):
         global user_id_counter
         self.id = user_id_counter
         user_id_counter += 1
         self.email = email
         self.password = generate_password_hash(password) if password else None
-        self.firstName = firstName
-        self.lastName = lastName
+        # For institutional roles (employer, faculty), use username; otherwise use firstName/lastName
+        if username:
+            self.username = username
+            self.firstName = username  # Store username in firstName for compatibility
+            self.lastName = ''  # Empty lastName for institutional roles
+        else:
+            self.firstName = firstName or ''
+            self.lastName = lastName or ''
+            self.username = None
         self.role = role
         self.provider = provider  # 'local', 'google', etc.
         self.provider_id = provider_id
@@ -34,16 +41,23 @@ class User:
     
     def to_dict(self):
         """Convert user to dictionary (without password)"""
-        return {
+        result = {
             'id': self.id,
             'email': self.email,
-            'firstName': self.firstName,
-            'lastName': self.lastName,
             'role': self.role,
             'provider': self.provider,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
+        # For institutional roles, return username; otherwise firstName/lastName
+        if hasattr(self, 'username') and self.username:
+            result['username'] = self.username
+            result['firstName'] = self.username  # For compatibility
+            result['lastName'] = ''
+        else:
+            result['firstName'] = self.firstName
+            result['lastName'] = self.lastName
+        return result
     
     def check_password(self, password):
         """Check if password matches"""
@@ -88,15 +102,27 @@ class User:
     @staticmethod
     def create(user_data):
         """Create new user"""
-        user = User(
-            email=user_data['email'],
-            password=user_data.get('password'),
-            firstName=user_data['firstName'],
-            lastName=user_data['lastName'],
-            role=user_data.get('role', 'student'),
-            provider=user_data.get('provider', 'local'),
-            provider_id=user_data.get('provider_id')
-        )
+        # Check if username is provided (for institutional roles)
+        username = user_data.get('username')
+        if username:
+            user = User(
+                email=user_data['email'],
+                password=user_data.get('password'),
+                username=username,
+                role=user_data.get('role', 'student'),
+                provider=user_data.get('provider', 'local'),
+                provider_id=user_data.get('provider_id')
+            )
+        else:
+            user = User(
+                email=user_data['email'],
+                password=user_data.get('password'),
+                firstName=user_data.get('firstName', ''),
+                lastName=user_data.get('lastName', ''),
+                role=user_data.get('role', 'student'),
+                provider=user_data.get('provider', 'local'),
+                provider_id=user_data.get('provider_id')
+            )
         users_db.append(user)
         return user
 

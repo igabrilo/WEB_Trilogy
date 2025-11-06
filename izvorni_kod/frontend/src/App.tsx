@@ -20,6 +20,13 @@ import UcenikProfilePage from './pages/profiles/UcenikProfilePage';
 import EmployerProfilePage from './pages/profiles/EmployerProfilePage';
 import FacultyProfilePage from './pages/profiles/FacultyProfilePage';
 import KvizPage from './pages/KvizPage';
+import CreateAssociationPage from './pages/CreateAssociationPage';
+import CreateJobPage from './pages/CreateJobPage';
+import JobApplicationsPage from './pages/JobApplicationsPage';
+import CreateFacultyPage from './pages/CreateFacultyPage';
+import AdminDashboard from './pages/dashboards/AdminDashboard';
+import AdminFacultiesPage from './pages/AdminFacultiesPage';
+import AdminAssociationsPage from './pages/AdminAssociationsPage';
 
 function App() {
   return (
@@ -30,12 +37,19 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/fakulteti" element={<FacultiesPage />} />
           <Route path="/prakse-i-poslovi" element={<InternshipsJobsPage />} />
+          <Route path="/prakse-i-poslovi/novo" element={<CreateJobPage />} />
+          <Route path="/prakse-i-poslovi/prijave" element={<JobApplicationsPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/fakulteti" element={<AdminFacultiesPage />} />
+          <Route path="/admin/fakulteti/novo" element={<CreateFacultyPage />} />
+          <Route path="/admin/udruge" element={<AdminAssociationsPage />} />
           <Route path="/resursi" element={<ResourcesPage />} />
           <Route path="/prijava" element={<LoginPage />} />
           <Route path="/registracija" element={<RegisterPage />} />
           <Route path="/odabir-kategorije" element={<SelectCategoryPage />} />
           <Route path="/udruge" element={<AssociationsPage />} />
           <Route path="/udruge/:slug" element={<AssociationDetailPage />} />
+          <Route path="/udruge/novo" element={<CreateAssociationPage />} />
           <Route path="/fakulteti/:slug" element={<FacultyDetailPage />} />
           <Route path="/pretraga" element={<SearchResultsPage />} />
           {/* Profile landing pages */}

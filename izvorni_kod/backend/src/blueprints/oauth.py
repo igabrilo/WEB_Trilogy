@@ -82,13 +82,24 @@ def init_oauth_routes(oauth_service, firebase_service):
                         redirect_url = f"{frontend_url}/prijava?error={error_msg}"
                         return redirect(redirect_url)
                     
-                    # Create new user
+                    # Check if email is from faculty domain - don't allow Google login for faculty
+                    from utils import is_faculty_email
+                    if is_faculty_email(user_info['email']):
+                        import urllib.parse
+                        frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
+                        error_msg = urllib.parse.quote('Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava. Google prijava nije dostupna za fakultetske email adrese.')
+                        redirect_url = f"{frontend_url}/prijava?error={error_msg}"
+                        return redirect(redirect_url)
+                    
+                    # Create new user (default to student, but can be employer)
+                    # For employers, they can use Google login
+                    # Use firstName as username for institutional roles (will be set later if needed)
                     new_user = User.create({
                         'email': user_info['email'],
                         'password': None,  # No password for OAuth users
                         'firstName': user_info['firstName'],
                         'lastName': user_info['lastName'],
-                        'role': 'student',
+                        'role': 'student',  # Default role, can be changed in profile
                         'provider': 'google',
                         'provider_id': user_info['provider_id']
                     })
