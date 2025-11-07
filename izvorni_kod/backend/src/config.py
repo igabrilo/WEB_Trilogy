@@ -41,18 +41,39 @@ class Config:
     }
     
     # AAI@EduHr Configuration
+    # Protocol: SAML (recommended), OIDC, or CAS
+    AAI_PROTOCOL = os.environ.get('AAI_PROTOCOL', 'SAML').upper()
+    
+    # SAML 2.0 Configuration
     AAI_ENTITY_ID = os.environ.get('AAI_ENTITY_ID', 'https://aai.fer.hr/idp/shibboleth')
     AAI_LOGIN_URL = os.environ.get('AAI_LOGIN_URL', 'https://aai.fer.hr/idp/profile/SAML2/Redirect/SSO')
     AAI_LOGOUT_URL = os.environ.get('AAI_LOGOUT_URL', 'https://aai.fer.hr/idp/profile/Logout')
     AAI_METADATA_URL = os.environ.get('AAI_METADATA_URL', 'https://aai.fer.hr/idp/shibboleth')
     
-    # Service Provider (SP) Configuration for AAI
+    # Service Provider (SP) Configuration for AAI/SAML
     SP_ENTITY_ID = os.environ.get('SP_ENTITY_ID', '')
     SP_ACS_URL = os.environ.get('SP_ACS_URL', '')  # Assertion Consumer Service URL
     SP_SLS_URL = os.environ.get('SP_SLS_URL', '')  # Single Logout Service URL
+    SP_X509_CERT = os.environ.get('SP_X509_CERT', '')  # SP certificate (PEM format)
+    SP_PRIVATE_KEY = os.environ.get('SP_PRIVATE_KEY', '')  # SP private key (PEM format)
+    IDP_X509_CERT = os.environ.get('IDP_X509_CERT', '')  # IdP certificate from metadata (PEM format)
+    
+    # OpenID Connect (OIDC) Configuration
+    AAI_OIDC_CLIENT_ID = os.environ.get('AAI_OIDC_CLIENT_ID', '')
+    AAI_OIDC_CLIENT_SECRET = os.environ.get('AAI_OIDC_CLIENT_SECRET', '')
+    AAI_OIDC_DISCOVERY_URL = os.environ.get('AAI_OIDC_DISCOVERY_URL', 'https://aai.fer.hr/.well-known/openid-configuration')
+    AAI_OIDC_END_SESSION_URL = os.environ.get('AAI_OIDC_END_SESSION_URL', 'https://aai.fer.hr/oidc/end_session')
+    
+    # CAS Configuration
+    AAI_CAS_SERVER_URL = os.environ.get('AAI_CAS_SERVER_URL', 'https://aai.fer.hr/cas')
+    AAI_CAS_VERSION = os.environ.get('AAI_CAS_VERSION', '2')  # CAS protocol version: 1, 2, or 3
+    SP_CAS_SERVICE_URL = os.environ.get('SP_CAS_SERVICE_URL', '')
     
     # Session configuration (needed for AAI redirects)
     SESSION_SECRET_KEY = os.environ.get('SESSION_SECRET_KEY', SECRET_KEY)
+    
+    # Frontend URL for redirects after authentication
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
     
     # Chatbot Configuration
     # Smotra UNIZG Chatbot

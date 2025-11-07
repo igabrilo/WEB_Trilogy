@@ -24,3 +24,14 @@ python-dotenv==1.0.1
 Flask-Mail==0.10.0
 # HTTP requests for chatbot integration
 requests==2.31.0
+# SAML 2.0 support for AAI@EduHr
+python3-saml==1.16.0
+# CAS (Central Authentication Service) support
+python-cas==1.6.0
+# XML parsing for SAML (dependency of python3-saml)
+# Note: lxml>=6.0.0 is required for xmlsec compatibility on macOS
+lxml>=6.0.0
+# Cryptography for SAML (dependency of python3-saml)
+cryptography==42.0.5
+# XML security (dependency of python3-saml)
+defusedxml==0.7.1
