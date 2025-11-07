@@ -1,4 +1,23 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: web_trilogy_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=unizg_career_hub
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - web_trilogy_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./izvorni_kod/backend
@@ -9,8 +28,12 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/unizg_career_hub
     volumes:
       - ./izvorni_kod/backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - web_trilogy_network
 
@@ -34,3 +57,6 @@ services:
 networks:
   web_trilogy_network:
     driver: bridge
+
+volumes:
+  postgres_data:

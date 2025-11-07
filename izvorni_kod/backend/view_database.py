@@ -16,15 +16,17 @@ def main():
     try:
         app = create_app('development')
         with app.app_context():
-            from flask import current_app
-            db = current_app.extensions['sqlalchemy']
+            # Import models within app context
+            from src import models
+            # Use the db instance that was initialized with the app
+            db = app.extensions['sqlalchemy']
             
             print("=" * 60)
             print("           UNIZG CAREER HUB - BAZA PODATAKA")
             print("=" * 60)
             
             # Korisnici
-            users = UserModel.query.all()
+            users = db.session.query(UserModel).all()
             print(f"\n👥 KORISNICI ({len(users)}):")
             if users:
                 for user in users:
@@ -33,7 +35,7 @@ def main():
                 print("  (Nema korisnika)")
             
             # Poslovi
-            jobs = JobModel.query.all()
+            jobs = db.session.query(JobModel).all()
             print(f"\n💼 POSLOVI I PRAKSE ({len(jobs)}):")
             if jobs:
                 for job in jobs:
@@ -42,7 +44,7 @@ def main():
                 print("  (Nema poslova)")
             
             # Prijave za posao
-            applications = JobApplicationModel.query.all()
+            applications = db.session.query(JobApplicationModel).all()
             print(f"\n📝 PRIJAVE ZA POSAO ({len(applications)}):")
             if applications:
                 for app in applications:
@@ -53,7 +55,7 @@ def main():
                 print("  (Nema prijava)")
             
             # Fakulteti
-            faculties = FacultyModel.query.all()
+            faculties = db.session.query(FacultyModel).all()
             print(f"\n🏛️ FAKULTETI ({len(faculties)}):")
             if faculties:
                 for faculty in faculties:
@@ -62,7 +64,7 @@ def main():
                 print("  (Nema fakulteta)")
             
             # Udruženja
-            associations = AssociationModel.query.all()
+            associations = db.session.query(AssociationModel).all()
             print(f"\n🤝 STUDENTSKA UDRUŽENJA ({len(associations)}):")
             if associations:
                 for assoc in associations:

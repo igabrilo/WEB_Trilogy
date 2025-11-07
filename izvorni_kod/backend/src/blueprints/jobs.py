@@ -110,6 +110,28 @@ def init_jobs_routes(oauth_service):
                 'message': f'Failed to get jobs: {str(e)}'
             }), 500
     
+    @jobs_bp.route('/<int:job_id>', methods=['GET'])
+    def get_job(job_id):
+        """Get a single job posting by ID"""
+        try:
+            job = JobModel.query.get(job_id)
+            if not job:
+                return jsonify({
+                    'success': False,
+                    'message': 'Job not found'
+                }), 404
+            
+            return jsonify({
+                'success': True,
+                'item': job.to_dict()
+            }), 200
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Failed to get job: {str(e)}'
+            }), 500
+    
     @jobs_bp.route('/<int:job_id>/apply', methods=['POST'])
     @oauth_service.token_required
     def apply_to_job(job_id, current_user_id, current_user_email, current_user_role):

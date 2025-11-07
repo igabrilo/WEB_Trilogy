@@ -12,20 +12,22 @@ def init_database(app):
     """Initialize database with tables"""
     print("Creating database tables...")
     with app.app_context():
-        # Get the db instance from the app
-        from flask import current_app
-        db = current_app.extensions['sqlalchemy']
+        # Import models first to register them
+        from src import models
+        # Use the db instance that was initialized with the app
+        db = app.extensions['sqlalchemy']
         db.create_all()
     print("Database tables created successfully!")
 
 def seed_database(app):
     """Seed database with sample data"""
     with app.app_context():
-        # Get the db instance from the app
-        from flask import current_app
-        db = current_app.extensions['sqlalchemy']
+        # Import models first to register them with db
+        from src import models
+        # Use the db instance that was initialized with the app
+        db = app.extensions['sqlalchemy']
         
-        # Import models within app context to avoid redefinition
+        # Import model classes
         from src.models import (
             UserModel, NotificationModel, FCMTokenModel, FacultyModel,
             AssociationModel, JobModel, JobApplicationModel, ChatSessionModel
@@ -33,7 +35,7 @@ def seed_database(app):
         
         print("Seeding database with sample data...")
         
-        # Create sample faculties
+        # Create all faculties from mock data
         faculties_data = [
             {
                 'slug': 'fer',
@@ -70,18 +72,78 @@ def seed_database(app):
                     'address': 'Horvatovac 102a, 10000 Zagreb',
                     'website': 'https://www.pmf.unizg.hr'
                 }
+            },
+            {
+                'slug': 'efzg',
+                'name': 'Ekonomski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'EFZG',
+                'contacts': {
+                    'email': 'info@efzg.hr',
+                    'phone': '+385 1 2383 333',
+                    'address': 'Trg J. F. Kennedyja 6, 10000 Zagreb',
+                    'website': 'https://www.efzg.unizg.hr'
+                }
+            },
+            {
+                'slug': 'fsb',
+                'name': 'Fakultet strojarstva i brodogradnje',
+                'type': 'faculty',
+                'abbreviation': 'FSB',
+                'contacts': {
+                    'email': 'info@fsb.hr',
+                    'phone': '+385 1 6168 222',
+                    'address': 'Ivana Lučića 5, 10000 Zagreb',
+                    'website': 'https://www.fsb.unizg.hr'
+                }
+            },
+            {
+                'slug': 'grad',
+                'name': 'Građevinski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'GRAD',
+                'contacts': {
+                    'email': 'info@grad.hr',
+                    'phone': '+385 1 4639 200',
+                    'address': 'Kačićeva 26, 10000 Zagreb',
+                    'website': 'https://www.grad.unizg.hr'
+                }
+            },
+            {
+                'slug': 'arhitekt',
+                'name': 'Arhitektonski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'ARH',
+                'contacts': {
+                    'email': 'info@arhitekt.hr',
+                    'phone': '+385 1 4639 000',
+                    'address': 'Kačićeva 26, 10000 Zagreb',
+                    'website': 'https://www.arhitekt.unizg.hr'
+                }
+            },
+            {
+                'slug': 'agr',
+                'name': 'Agronomski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'AGR',
+                'contacts': {
+                    'email': 'info@agr.hr',
+                    'phone': '+385 1 2393 777',
+                    'address': 'Svetošimunska cesta 25, 10000 Zagreb',
+                    'website': 'https://www.agr.unizg.hr'
+                }
             }
         ]
         
         for faculty_data in faculties_data:
-            existing = FacultyModel.query.filter_by(slug=faculty_data['slug']).first()
+            existing = db.session.query(FacultyModel).filter_by(slug=faculty_data['slug']).first()
             if not existing:
                 faculty = FacultyModel(**faculty_data)
                 db.session.add(faculty)
         
         # Create admin user
         admin_email = 'ivan.gabrilo@gmail.com'
-        existing_admin = UserModel.query.filter_by(email=admin_email).first()
+        existing_admin = db.session.query(UserModel).filter_by(email=admin_email).first()
         if not existing_admin:
             admin_user = UserModel(
                 email=admin_email,
@@ -92,7 +154,7 @@ def seed_database(app):
             )
             db.session.add(admin_user)
         
-        # Create sample associations
+        # Create all associations from mock data
         associations_data = [
             {
                 'slug': 'aiesec-fer',
@@ -124,14 +186,253 @@ def seed_database(app):
                     'website': 'https://best.hr',
                     'facebook': 'https://facebook.com/bestzagreb'
                 }
+            },
+            {
+                'slug': 'efsa-fer',
+                'name': 'EFSA FER',
+                'faculty': 'FER',
+                'type': 'academic',
+                'logo_text': 'EFSA',
+                'logo_bg': '#2d5016',
+                'short_description': 'Europska federacija studentskih udruga',
+                'description': 'EFSA promiče suradnju između studentskih organizacija diljem Europe.',
+                'tags': ['european', 'academic', 'networking'],
+                'links': {
+                    'website': 'https://efsa.hr'
+                }
+            },
+            {
+                'slug': 'ieee-student-branch',
+                'name': 'IEEE Student Branch Zagreb',
+                'faculty': 'FER',
+                'type': 'professional',
+                'logo_text': 'IEEE',
+                'logo_bg': '#00629b',
+                'short_description': 'Profesionalna organizacija za elektrotehničare i računarce',
+                'description': 'IEEE Student Branch pruža prilike za profesionalni razvoj i networking u području elektrotehnike i računarstva.',
+                'tags': ['professional', 'engineering', 'technology', 'networking'],
+                'links': {
+                    'website': 'https://ieee.hr',
+                    'facebook': 'https://facebook.com/ieeezagreb'
+                }
+            },
+            {
+                'slug': 'hackathons-fer',
+                'name': 'Hackathons FER',
+                'faculty': 'FER',
+                'type': 'technical',
+                'logo_text': 'HACK',
+                'logo_bg': '#1a1a1a',
+                'short_description': 'Organizacija hackathona i programerskih natjecanja',
+                'description': 'Organiziramo hackathone i programerska natjecanja za studente.',
+                'tags': ['hackathon', 'programming', 'competition', 'coding'],
+                'links': {
+                    'website': 'https://hackathons.fer.hr'
+                }
+            },
+            {
+                'slug': 'ffzg-studentski-savjet',
+                'name': 'Studentski savjet FFZG',
+                'faculty': 'FFZG',
+                'type': 'academic',
+                'logo_text': 'SS FFZG',
+                'logo_bg': '#8b4513',
+                'short_description': 'Studentska samouprava Filozofskog fakulteta',
+                'description': 'Zastupamo interese studentata Filozofskog fakulteta.',
+                'tags': ['student-government', 'academic', 'representation'],
+                'links': {
+                    'website': 'https://ss.ffzg.hr'
+                }
+            },
+            {
+                'slug': 'pmf-studentski-klub',
+                'name': 'Studentski klub PMF',
+                'faculty': 'PMF',
+                'type': 'academic',
+                'logo_text': 'SK PMF',
+                'logo_bg': '#006400',
+                'short_description': 'Studentska organizacija Prirodoslovno-matematičkog fakulteta',
+                'description': 'Organiziramo događaje i aktivnosti za studente PMF-a.',
+                'tags': ['academic', 'science', 'mathematics', 'events'],
+                'links': {
+                    'website': 'https://sk.pmf.hr'
+                }
             }
         ]
         
         for assoc_data in associations_data:
-            existing = AssociationModel.query.filter_by(slug=assoc_data['slug']).first()
+            existing = db.session.query(AssociationModel).filter_by(slug=assoc_data['slug']).first()
             if not existing:
                 association = AssociationModel(**assoc_data)
                 db.session.add(association)
+        
+        # Create test employer user for jobs
+        employer_user = db.session.query(UserModel).filter_by(email='employer@test.hr').first()
+        if not employer_user:
+            # Create user without password first to avoid scrypt issue in Python 3.9
+            employer_user = UserModel(
+                email='employer@test.hr',
+                password=None,  # Set password later
+                username='TestPoslodavac',
+                role='employer',
+                provider='local'
+            )
+            db.session.add(employer_user)
+            db.session.flush()  # Get the ID
+            # Set password using pbkdf2 method (works in Python 3.9)
+            from werkzeug.security import generate_password_hash
+            employer_user.password_hash = generate_password_hash('test123', method='pbkdf2:sha256')
+            db.session.commit()
+        
+        # Create jobs and internships
+        jobs_data = [
+            {
+                'title': 'Backend Developer Internship',
+                'description': 'Tražimo studenta za praksu u backend razvoju. Radit ćete na razvoju REST API-ja koristeći Python i Flask. Praksa traje 3 mjeseca, mogućnost zaposlenja nakon prakse.',
+                'type': 'internship',
+                'company': 'Tech Solutions d.o.o.',
+                'location': 'Zagreb, Remote',
+                'salary': 'Neplaćeno (praksa)',
+                'requirements': [
+                    'Poznavanje Python programskog jezika',
+                    'Osnovno poznavanje REST API-ja',
+                    'Poznavanje Git-a',
+                    'Dobar engleski jezik'
+                ],
+                'tags': ['python', 'flask', 'backend', 'internship', 'remote'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'Frontend Developer - Junior',
+                'description': 'Pozivamo mlade developere da se pridruže našem timu. Radit ćete na modernim web aplikacijama koristeći React i TypeScript. Nudimo mentorstvo i mogućnost profesionalnog razvoja.',
+                'type': 'job',
+                'company': 'Digital Agency Zagreb',
+                'location': 'Zagreb',
+                'salary': '8.000 - 12.000 kn',
+                'requirements': [
+                    'Poznavanje React-a i TypeScript-a',
+                    'Iskustvo s CSS i responsive designom',
+                    'Poznavanje Git-a',
+                    'Komunikacijske vještine'
+                ],
+                'tags': ['react', 'typescript', 'frontend', 'junior', 'zagreb'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'Data Science Praksa',
+                'description': 'Pružamo priliku studentima da steknu praktično iskustvo u području data science-a. Radit ćete na analizi podataka, izradi modela i vizualizaciji rezultata.',
+                'type': 'internship',
+                'company': 'Data Analytics Lab',
+                'location': 'Zagreb',
+                'salary': 'Neplaćeno (praksa)',
+                'requirements': [
+                    'Poznavanje Python-a (pandas, numpy)',
+                    'Osnovno poznavanje statistike',
+                    'Interes za machine learning',
+                    'Dobar engleski jezik'
+                ],
+                'tags': ['python', 'data-science', 'machine-learning', 'internship', 'analytics'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'Full Stack Developer - Part Time',
+                'description': 'Tražimo studenta za part-time poziciju full stack developera. Radit ćete na razvoju web aplikacija od frontenda do backenda. Fleksibilno radno vrijeme.',
+                'type': 'part-time',
+                'company': 'StartupHub',
+                'location': 'Zagreb, Hybrid',
+                'salary': '4.000 - 6.000 kn',
+                'requirements': [
+                    'Poznavanje JavaScript-a (Node.js, React)',
+                    'Osnovno poznavanje baza podataka',
+                    'Mogućnost rada 20h tjedno',
+                    'Komunikacijske vještine'
+                ],
+                'tags': ['javascript', 'nodejs', 'react', 'fullstack', 'part-time', 'hybrid'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'DevOps Engineer - Remote',
+                'description': 'Pozivamo DevOps inženjere da se pridruže našem timu. Radit ćete na automatizaciji deployment procesa, upravljanju cloud infrastrukturom i CI/CD pipeline-ima.',
+                'type': 'remote',
+                'company': 'Cloud Services Inc.',
+                'location': 'Remote',
+                'salary': '15.000 - 20.000 kn',
+                'requirements': [
+                    'Iskustvo s Docker i Kubernetes',
+                    'Poznavanje AWS ili Azure',
+                    'Poznavanje CI/CD alata (GitHub Actions, GitLab CI)',
+                    'Poznavanje Linux-a',
+                    'Engleski jezik'
+                ],
+                'tags': ['devops', 'docker', 'kubernetes', 'aws', 'remote', 'ci-cd'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'Mobile App Developer Praksa',
+                'description': 'Tražimo studente za praksu u razvoju mobilnih aplikacija. Radit ćete na iOS ili Android aplikacijama koristeći moderne tehnologije. Praksa traje 2-3 mjeseca.',
+                'type': 'internship',
+                'company': 'MobileFirst Solutions',
+                'location': 'Zagreb',
+                'salary': 'Neplaćeno (praksa)',
+                'requirements': [
+                    'Poznavanje Swift-a (iOS) ili Kotlin-a (Android)',
+                    'Osnovno poznavanje mobile development-a',
+                    'Interes za UI/UX design',
+                    'Dobar engleski jezik'
+                ],
+                'tags': ['mobile', 'ios', 'android', 'swift', 'kotlin', 'internship'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'QA Engineer - Junior',
+                'description': 'Tražimo junior QA inženjera za testiranje web i mobilnih aplikacija. Radit ćete na pisanju test planova, izvršavanju testova i prijavljivanju bugova.',
+                'type': 'job',
+                'company': 'Quality Assurance Pro',
+                'location': 'Zagreb',
+                'salary': '7.000 - 10.000 kn',
+                'requirements': [
+                    'Poznavanje testiranja softvera',
+                    'Osnovno poznavanje programiranja',
+                    'Pažljivost i analitičko razmišljanje',
+                    'Komunikacijske vještine'
+                ],
+                'tags': ['qa', 'testing', 'quality-assurance', 'junior', 'zagreb'],
+                'status': 'active',
+                'created_by': employer_user.id
+            },
+            {
+                'title': 'UI/UX Designer Praksa',
+                'description': 'Pružamo priliku studentima dizajna da steknu praktično iskustvo u UI/UX dizajnu. Radit ćete na dizajnu web i mobilnih aplikacija koristeći Figma.',
+                'type': 'internship',
+                'company': 'Design Studio Zagreb',
+                'location': 'Zagreb',
+                'salary': 'Neplaćeno (praksa)',
+                'requirements': [
+                    'Poznavanje Figma ili Adobe XD',
+                    'Osnovno poznavanje UI/UX principa',
+                    'Portfolio s primjerima radova',
+                    'Kreativnost i pažljivost'
+                ],
+                'tags': ['ui-ux', 'design', 'figma', 'internship', 'creative'],
+                'status': 'active',
+                'created_by': employer_user.id
+            }
+        ]
+        
+        for job_data in jobs_data:
+            existing = db.session.query(JobModel).filter_by(
+                title=job_data['title'],
+                company=job_data['company']
+            ).first()
+            if not existing:
+                job = JobModel(**job_data)
+                db.session.add(job)
         
         db.session.commit()
         print("Database seeded successfully!")
@@ -140,16 +441,17 @@ def reset_database(app):
     """Reset database (drop and recreate)"""
     print("Dropping all tables...")
     with app.app_context():
-        # Get the db instance from the app
-        from flask import current_app
-        db = current_app.extensions['sqlalchemy']
+        # Import models first to register them
+        from src import models
+        # Use the db instance that was initialized with the app
+        db = app.extensions['sqlalchemy']
         db.drop_all()
     
     print("Creating new tables...")
     with app.app_context():
-        # Get the db instance from the app
-        from flask import current_app
-        db = current_app.extensions['sqlalchemy']
+        from src import models
+        # Use the db instance that was initialized with the app
+        db = app.extensions['sqlalchemy']
         db.create_all()
     print("Database reset successfully!")
 

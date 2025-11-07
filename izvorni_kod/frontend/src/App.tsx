@@ -24,6 +24,9 @@ import CreateAssociationPage from './pages/CreateAssociationPage';
 import CreateJobPage from './pages/CreateJobPage';
 import JobApplicationsPage from './pages/JobApplicationsPage';
 import CreateFacultyPage from './pages/CreateFacultyPage';
+import EditFacultyPage from './pages/EditFacultyPage';
+import EditAssociationPage from './pages/EditAssociationPage';
+import JobDetailPage from './pages/JobDetailPage';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import AdminFacultiesPage from './pages/AdminFacultiesPage';
 import AdminAssociationsPage from './pages/AdminAssociationsPage';
@@ -37,12 +40,15 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/fakulteti" element={<FacultiesPage />} />
           <Route path="/prakse-i-poslovi" element={<InternshipsJobsPage />} />
+          <Route path="/prakse-i-poslovi/:id" element={<JobDetailPage />} />
           <Route path="/prakse-i-poslovi/novo" element={<CreateJobPage />} />
           <Route path="/prakse-i-poslovi/prijave" element={<JobApplicationsPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/fakulteti" element={<AdminFacultiesPage />} />
           <Route path="/admin/fakulteti/novo" element={<CreateFacultyPage />} />
+          <Route path="/admin/fakulteti/:slug/uredi" element={<EditFacultyPage />} />
           <Route path="/admin/udruge" element={<AdminAssociationsPage />} />
+          <Route path="/udruge/:slug/uredi" element={<EditAssociationPage />} />
           <Route path="/resursi" element={<ResourcesPage />} />
           <Route path="/prijava" element={<LoginPage />} />
           <Route path="/registracija" element={<RegisterPage />} />

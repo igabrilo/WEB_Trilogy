@@ -1,9 +1,9 @@
-// For browser requests, use localhost:5000 (backend port)
+// For browser requests, use localhost:5001 (backend port mapped from Docker)
 // The VITE_API_URL env var is for Docker internal network (backend:5000)
-// But browser requests need to go through the host port
+// But browser requests need to go through the host port 5001
 const API_URL = import.meta.env.VITE_API_URL?.includes('localhost')
   ? import.meta.env.VITE_API_URL
-  : 'http://localhost:5000';
+  : 'http://localhost:5001';
 
 export interface LoginCredentials {
   email: string;
@@ -271,6 +271,10 @@ class ApiService {
     return this.request<ListResponse<Job>>(`/api/jobs${qp ? `?${qp}` : ''}`);
   }
 
+  async getJob(jobId: number): Promise<ItemResponse<Job>> {
+    return this.request<ItemResponse<Job>>(`/api/jobs/${jobId}`);
+  }
+
   async applyToJob(jobId: number, message?: string): Promise<ItemResponse<JobApplication>> {
     return this.request<ItemResponse<JobApplication>>(`/api/jobs/${jobId}/apply`, {
       method: 'POST',
@@ -317,7 +321,15 @@ class ApiService {
     return this.request<ListResponse<Faculty>>('/api/admin/faculties');
   }
 
-  async updateFaculty(slug: string, data: Partial<Faculty>): Promise<ItemResponse<Faculty>> {
+  async updateFaculty(slug: string, data: {
+    name?: string;
+    type?: 'faculty' | 'academy';
+    abbreviation?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+  }): Promise<ItemResponse<Faculty>> {
     return this.request<ItemResponse<Faculty>>(`/api/admin/faculties/${slug}`, {
       method: 'PUT',
       body: JSON.stringify(data),

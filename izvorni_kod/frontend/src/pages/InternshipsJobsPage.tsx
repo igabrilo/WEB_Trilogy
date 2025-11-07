@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService, type Job } from '../services/api';
 import Header from '../components/Header';
 import FeaturedJobs from '../components/FeaturedJobs';
 import Footer from '../components/Footer';
@@ -10,48 +11,30 @@ const InternshipsJobsPage = () => {
    const internshipsGridRef = useRef<HTMLDivElement>(null);
    const { isAuthenticated } = useAuth();
    const navigate = useNavigate();
-   const internships = [
-      {
-         id: 1,
-         title: 'Ljetna praksa - Software Development',
-         company: 'Tech Solutions d.o.o.',
-         location: 'Zagreb, Hrvatska',
-         duration: '3 mjeseca',
-         type: 'Praksa',
-         paid: true,
-         posted: 'prije 5 dana'
-      },
-      {
-         id: 2,
-         title: 'Marketing Internship',
-         company: 'Digital Agency',
-         location: 'Udaljeno',
-         duration: '6 mjeseci',
-         type: 'Praksa',
-         paid: true,
-         posted: 'prije 2 dana'
-      },
-      {
-         id: 3,
-         title: 'Research Assistant',
-         company: 'FER Research Lab',
-         location: 'Zagreb, Hrvatska',
-         duration: '1 godina',
-         type: 'Djelomično radno vrijeme',
-         paid: true,
-         posted: 'prije 1 tjedan'
-      },
-      {
-         id: 4,
-         title: 'UX/UI Design Internship',
-         company: 'Creative Studio',
-         location: 'Zagreb, Hrvatska',
-         duration: '3 mjeseca',
-         type: 'Praksa',
-         paid: false,
-         posted: 'prije 3 dana'
-      }
-   ];
+   const [internships, setInternships] = useState<Job[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [activeFilter, setActiveFilter] = useState<string>('all');
+
+   useEffect(() => {
+      const loadInternships = async () => {
+         setLoading(true);
+         try {
+            const typeFilter = activeFilter === 'all' ? undefined :
+               activeFilter === 'prakse' ? 'internship' :
+                  activeFilter === 'poslovi' ? 'job' :
+                     activeFilter === 'djelomicno' ? 'part-time' :
+                        activeFilter === 'udaljeno' ? 'remote' : undefined;
+
+            const res = await apiService.getJobs({ type: typeFilter });
+            setInternships(res.items || []);
+         } catch (error) {
+            console.error('Error loading internships:', error);
+         } finally {
+            setLoading(false);
+         }
+      };
+      loadInternships();
+   }, [activeFilter]);
 
    useEffect(() => {
       const observerOptions = {
@@ -78,7 +61,7 @@ const InternshipsJobsPage = () => {
       return () => {
          observer.disconnect();
       };
-   }, []);
+   }, [internships]);
 
    return (
       <div className="internships-jobs-page">
@@ -91,67 +74,114 @@ const InternshipsJobsPage = () => {
                      Pronađi savršenu priliku za praksu ili posao koji će ti pomoći u karijeri
                   </p>
                   <div className="filter-tabs slide-up" style={{ animationDelay: '0.2s' }}>
-                     <button className="filter-tab active">Sve</button>
-                     <button className="filter-tab">Prakse</button>
-                     <button className="filter-tab">Poslovi</button>
-                     <button className="filter-tab">Djelomično radno vrijeme</button>
-                     <button className="filter-tab">Udaljeno</button>
+                     <button
+                        className={`filter-tab ${activeFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('all')}
+                     >
+                        Sve
+                     </button>
+                     <button
+                        className={`filter-tab ${activeFilter === 'prakse' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('prakse')}
+                     >
+                        Prakse
+                     </button>
+                     <button
+                        className={`filter-tab ${activeFilter === 'poslovi' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('poslovi')}
+                     >
+                        Poslovi
+                     </button>
+                     <button
+                        className={`filter-tab ${activeFilter === 'djelomicno' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('djelomicno')}
+                     >
+                        Djelomično radno vrijeme
+                     </button>
+                     <button
+                        className={`filter-tab ${activeFilter === 'udaljeno' ? 'active' : ''}`}
+                        onClick={() => setActiveFilter('udaljeno')}
+                     >
+                        Udaljeno
+                     </button>
                   </div>
                </div>
             </section>
 
             <section className="internships-section">
                <div className="internships-container">
-                  <h2 className="section-title slide-up">Dostupne prakse</h2>
-                  <div className="internships-grid" ref={internshipsGridRef}>
-                     {internships.map(internship => (
-                        <div key={internship.id} className="internship-card">
-                           <div className="internship-header">
-                              <div className="internship-type-badge">{internship.type}</div>
-                              {internship.paid && (
-                                 <span className="internship-paid">Plaćeno</span>
-                              )}
-                           </div>
-                           <h3 className="internship-title">{internship.title}</h3>
-                           <p className="internship-company">{internship.company}</p>
-                           <div className="internship-details">
-                              <div className="internship-detail">
-                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" stroke="currentColor" strokeWidth="1.5" />
-                                    <path d="M8 1c-3 0-5.5 2.5-5.5 5.5 0 4 5.5 8.5 5.5 8.5s5.5-4.5 5.5-8.5C13.5 3.5 11 1 8 1z" stroke="currentColor" strokeWidth="1.5" />
-                                 </svg>
-                                 <span>{internship.location}</span>
+                  <h2 className="section-title slide-up">
+                     {activeFilter === 'all' ? 'Dostupne prakse i poslovi' :
+                        activeFilter === 'prakse' ? 'Dostupne prakse' :
+                           activeFilter === 'poslovi' ? 'Dostupni poslovi' :
+                              activeFilter === 'djelomicno' ? 'Djelomično radno vrijeme' :
+                                 'Udaljeno'}
+                  </h2>
+                  {loading ? (
+                     <div style={{ padding: '2rem', textAlign: 'center' }}>Učitavanje...</div>
+                  ) : internships.length === 0 ? (
+                     <div style={{ padding: '2rem', textAlign: 'center' }}>
+                        Nema dostupnih {activeFilter === 'all' ? 'praksi i poslova' : activeFilter === 'prakse' ? 'praksi' : 'poslova'}.
+                     </div>
+                  ) : (
+                     <div className="internships-grid" ref={internshipsGridRef}>
+                        {internships.map(internship => {
+                           const typeLabel = internship.type === 'internship' ? 'Praksa' :
+                              internship.type === 'job' ? 'Posao' :
+                                 internship.type === 'part-time' ? 'Djelomično radno vrijeme' :
+                                    internship.type === 'remote' ? 'Udaljeno' : internship.type;
+
+                           return (
+                              <div key={internship.id} className="internship-card">
+                                 <div className="internship-header">
+                                    <div className="internship-type-badge">{typeLabel}</div>
+                                    {internship.salary && (
+                                       <span className="internship-paid">Plaćeno</span>
+                                    )}
+                                 </div>
+                                 <h3 className="internship-title">{internship.title}</h3>
+                                 {internship.company && <p className="internship-company">{internship.company}</p>}
+                                 <div className="internship-details">
+                                    {internship.location && (
+                                       <div className="internship-detail">
+                                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                             <path d="M8 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" stroke="currentColor" strokeWidth="1.5" />
+                                             <path d="M8 1c-3 0-5.5 2.5-5.5 5.5 0 4 5.5 8.5 5.5 8.5s5.5-4.5 5.5-8.5C13.5 3.5 11 1 8 1z" stroke="currentColor" strokeWidth="1.5" />
+                                          </svg>
+                                          <span>{internship.location}</span>
+                                       </div>
+                                    )}
+                                    {internship.createdAt && (
+                                       <div className="internship-detail">
+                                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                             <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                          </svg>
+                                          <span>{new Date(internship.createdAt).toLocaleDateString('hr-HR')}</span>
+                                       </div>
+                                    )}
+                                 </div>
+                                 {internship.salary && (
+                                    <div style={{ marginTop: '8px', fontWeight: 600, color: '#059669' }}>
+                                       {internship.salary}
+                                    </div>
+                                 )}
+                                 <button
+                                    className="internship-apply-btn"
+                                    onClick={() => {
+                                       if (isAuthenticated) {
+                                          navigate(`/prakse-i-poslovi/${internship.id}`);
+                                       } else {
+                                          navigate('/prijava');
+                                       }
+                                    }}
+                                 >
+                                    {isAuthenticated ? 'Prijavi se' : 'Prijavi se (zahtijeva prijavu)'}
+                                 </button>
                               </div>
-                              <div className="internship-detail">
-                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M8 1v7l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                                 </svg>
-                                 <span>{internship.duration}</span>
-                              </div>
-                              <div className="internship-detail">
-                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                 </svg>
-                                 <span>{internship.posted}</span>
-                              </div>
-                           </div>
-                           <button 
-                              className="internship-apply-btn"
-                              onClick={() => {
-                                 if (isAuthenticated) {
-                                    // TODO: Implementiraj prijavu na praksu/posao
-                                    alert('Funkcija prijave će biti implementirana');
-                                 } else {
-                                    navigate('/prijava');
-                                 }
-                              }}
-                           >
-                              {isAuthenticated ? 'Prijavi se' : 'Prijavi se (zahtijeva prijavu)'}
-                           </button>
-                        </div>
-                     ))}
-                  </div>
+                           );
+                        })}
+                     </div>
+                  )}
                </div>
             </section>
 

@@ -6,12 +6,10 @@ from datetime import datetime
 try:
     from models import UserModel, FacultyModel, AssociationModel
     from oauth2_service import OAuth2Service
-    from blueprints.search import FACULTIES_DATA
     from database import db
 except ImportError:
     from ..models import UserModel, FacultyModel, AssociationModel
     from ..oauth2_service import OAuth2Service
-    from ..blueprints.search import FACULTIES_DATA
     from ..database import db
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
@@ -105,13 +103,10 @@ def init_admin_routes(oauth_service):
             db_faculties = FacultyModel.query.all()
             db_faculties_list = [faculty.to_dict() for faculty in db_faculties]
             
-            # Combine with sample data
-            all_faculties = FACULTIES_DATA + db_faculties_list
-            
             return jsonify({
                 'success': True,
-                'count': len(all_faculties),
-                'items': all_faculties
+                'count': len(db_faculties_list),
+                'items': db_faculties_list
             }), 200
             
         except Exception as e:
@@ -131,28 +126,14 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can update faculties'
                 }), 403
             
-            # Find faculty in database first, then in mock data
+            # Find faculty in database
             faculty = FacultyModel.query.filter_by(slug=slug).first()
             
             if not faculty:
-                # Check if it's in sample data and create if needed
-                sample_faculty = next((f for f in FACULTIES_DATA if f.get('slug') == slug), None)
-                if sample_faculty:
-                    # Create database entry from sample data
-                    faculty = FacultyModel(
-                        slug=sample_faculty['slug'],
-                        name=sample_faculty['name'],
-                        type=sample_faculty.get('type', 'faculty'),
-                        abbreviation=sample_faculty.get('abbreviation', ''),
-                        contacts=sample_faculty.get('contacts', {})
-                    )
-                    db.session.add(faculty)
-                    db.session.commit()
-                else:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Faculty not found'
-                    }), 404
+                return jsonify({
+                    'success': False,
+                    'message': 'Faculty not found'
+                }), 404
             
             data = request.get_json()
             
@@ -206,12 +187,12 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can delete faculties'
                 }), 403
             
-            # Can only delete from database, not sample data
+            # Delete from database
             faculty = FacultyModel.query.filter_by(slug=slug).first()
             if not faculty:
                 return jsonify({
                     'success': False,
-                    'message': 'Faculty not found or cannot be deleted (is in system data)'
+                    'message': 'Faculty not found'
                 }), 404
             
             db.session.delete(faculty)
@@ -239,18 +220,14 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can view all associations'
                 }), 403
             
-            from blueprints.search import ASSOCIATIONS_DATA
             # Get associations from database
             db_associations = AssociationModel.query.all()
             db_associations_list = [association.to_dict() for association in db_associations]
             
-            # Combine with sample data
-            all_associations = ASSOCIATIONS_DATA + db_associations_list
-            
             return jsonify({
                 'success': True,
-                'count': len(all_associations),
-                'items': all_associations
+                'count': len(db_associations_list),
+                'items': db_associations_list
             }), 200
             
         except Exception as e:
@@ -270,38 +247,14 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can update associations'
                 }), 403
             
-            # Find association in database first, then in sample data
+            # Find association in database
             association = AssociationModel.query.filter_by(id=association_id).first()
             
             if not association:
-                # Check if it's in sample data and create if needed
-                from blueprints.search import ASSOCIATIONS_DATA
-                sample_association = next((a for a in ASSOCIATIONS_DATA if a.get('id') == association_id), None)
-                if sample_association:
-                    # Create database entry from sample data - generate slug from name
-                    import re
-                    slug = re.sub(r'[^\w\s-]', '', sample_association['name']).strip().lower()
-                    slug = re.sub(r'[-\s]+', '-', slug)
-                    
-                    association = AssociationModel(
-                        slug=slug,
-                        name=sample_association['name'],
-                        faculty=sample_association.get('faculty', ''),
-                        type=sample_association.get('type', ''),
-                        logo_text=sample_association.get('logoText', ''),
-                        logo_bg=sample_association.get('logoBg', ''),
-                        short_description=sample_association.get('shortDescription', ''),
-                        description=sample_association.get('description', ''),
-                        tags=sample_association.get('tags', []),
-                        links=sample_association.get('links', {})
-                    )
-                    db.session.add(association)
-                    db.session.commit()
-                else:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Association not found'
-                    }), 404
+                return jsonify({
+                    'success': False,
+                    'message': 'Association not found'
+                }), 404
             
             data = request.get_json()
             
