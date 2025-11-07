@@ -441,6 +441,36 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Chatbot methods
+  async sendChatbotMessage(message: string, sessionId?: string, provider: string = 'smotra'): Promise<ChatbotResponse> {
+    return this.request<ChatbotResponse>('/api/chatbot/send', {
+      method: 'POST',
+      body: JSON.stringify({ message, session_id: sessionId, provider }),
+    });
+  }
+
+  async getChatbotHistory(sessionId?: string): Promise<{ success: boolean; messages: ChatMessage[]; session_id?: string }> {
+    const qs = new URLSearchParams();
+    if (sessionId) qs.append('session_id', sessionId);
+    return this.request(`/api/chatbot/history${qs.toString() ? `?${qs.toString()}` : ''}`);
+  }
+
+  async createChatbotSession(): Promise<{ success: boolean; session_id: string }> {
+    return this.request('/api/chatbot/session', {
+      method: 'POST',
+    });
+  }
+
+  async deleteChatbotSession(sessionId: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/chatbot/session/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getChatbotProviders(): Promise<{ success: boolean; providers: string[] }> {
+    return this.request('/api/chatbot/providers');
+  }
 }
 
 export interface Job {
@@ -503,6 +533,26 @@ export interface FavoriteFaculty {
   facultySlug: string;
   facultyName?: string;
   createdAt?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  message: string;
+  timestamp?: string;
+}
+
+export interface ChatbotResponse {
+  success: boolean;
+  message?: string;
+  session_id?: string;
+  provider?: string;
+  error?: string;
+}
+
+export interface ChatbotSession {
+  session_id: string;
+  messages: ChatMessage[];
+  created_at?: string;
 }
 
 export const apiService = new ApiService();

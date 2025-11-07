@@ -263,6 +263,10 @@ class ChatbotService:
         """Get a chatbot provider by name"""
         return self.providers.get(provider_name)
     
+    def get_available_providers(self) -> List[str]:
+        """Get list of available chatbot provider names"""
+        return list(self.providers.keys())
+    
     def send_message(self, message: str, provider_name: str = 'smotra', 
                     context: Optional[Dict] = None, session_id: Optional[str] = None) -> Dict:
         """
@@ -294,10 +298,6 @@ class ChatbotService:
             context['session_id'] = session_id
         
         return provider.send_message(message, context)
-    
-    def get_available_providers(self) -> List[str]:
-        """Get list of available/configured providers"""
-        return list(self.providers.keys())
     
     def register_provider(self, name: str, provider: ChatbotProvider):
         """Register a custom chatbot provider"""

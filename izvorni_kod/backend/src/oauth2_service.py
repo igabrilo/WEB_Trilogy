@@ -128,4 +128,49 @@ class OAuth2Service:
             
             return f(*args, **kwargs)
         return decorated
+    
+    def optional_token(self, f):
+        """Decorator for routes that work with or without authentication"""
+        from functools import wraps
+        
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            from flask import request
+            
+            token = request.headers.get('Authorization')
+            
+            # Try to get user data if token is provided, but don't require it
+            if token:
+                try:
+                    if token.startswith('Bearer '):
+                        token = token[7:]
+                    
+                    data = self.verify_token(token)
+                    if data:
+                        # Add user data to kwargs if token is valid
+                        kwargs['current_user_id'] = data.get('user_id')
+                        kwargs['current_user_email'] = data.get('email')
+                        kwargs['current_user_role'] = data.get('role')
+                        kwargs['is_authenticated'] = True
+                    else:
+                        # Token is invalid, but continue without auth
+                        kwargs['current_user_id'] = None
+                        kwargs['current_user_email'] = None
+                        kwargs['current_user_role'] = None
+                        kwargs['is_authenticated'] = False
+                except Exception:
+                    # Token verification failed, continue without auth
+                    kwargs['current_user_id'] = None
+                    kwargs['current_user_email'] = None
+                    kwargs['current_user_role'] = None
+                    kwargs['is_authenticated'] = False
+            else:
+                # No token provided, continue without auth
+                kwargs['current_user_id'] = None
+                kwargs['current_user_email'] = None
+                kwargs['current_user_role'] = None
+                kwargs['is_authenticated'] = False
+            
+            return f(*args, **kwargs)
+        return decorated
 

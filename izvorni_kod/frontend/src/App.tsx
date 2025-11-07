@@ -34,6 +34,7 @@ import ErasmusProjectDetailPage from './pages/ErasmusProjectDetailPage';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import AdminFacultiesPage from './pages/AdminFacultiesPage';
 import AdminAssociationsPage from './pages/AdminAssociationsPage';
+import ChatbotWidget from './components/ChatbotWidget';
 
 function App() {
   return (
@@ -72,25 +73,26 @@ function App() {
           <Route path="/profil/poslodavac" element={<EmployerProfilePage />} />
           <Route path="/profil/fakultet" element={<FacultyProfilePage />} />
           <Route path="/kviz" element={<KvizPage />} />
-          
+
           {/* Protected routes (bijelo) - zahtijevaju autentifikaciju */}
-          <Route 
-            path="/profil" 
+          <Route
+            path="/profil"
             element={
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/profil/uredi" 
+          <Route
+            path="/profil/uredi"
             element={
               <ProtectedRoute>
                 <EditProfilePage />
               </ProtectedRoute>
-            } 
+            }
           />
         </Routes>
+        <ChatbotWidget />
       </Router>
     </AuthProvider>
   );
