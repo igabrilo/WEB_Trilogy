@@ -20,6 +20,10 @@ import UcenikProfilePage from './pages/profiles/UcenikProfilePage';
 import EmployerProfilePage from './pages/profiles/EmployerProfilePage';
 import FacultyProfilePage from './pages/profiles/FacultyProfilePage';
 import KvizPage from './pages/KvizPage';
+import AboutPage from './pages/static/AboutPage';
+import ContactPage from './pages/static/ContactPage.tsx';
+import FAQPage from './pages/static/FAQPage.tsx';
+import HistoryPage from './pages/static/HistoryPage.tsx';
 import CreateAssociationPage from './pages/CreateAssociationPage';
 import CreateJobPage from './pages/CreateJobPage';
 import JobApplicationsPage from './pages/JobApplicationsPage';
@@ -73,6 +77,10 @@ function App() {
           <Route path="/profil/poslodavac" element={<EmployerProfilePage />} />
           <Route path="/profil/fakultet" element={<FacultyProfilePage />} />
           <Route path="/kviz" element={<KvizPage />} />
+          <Route path="/o-nama" element={<AboutPage />} />
+          <Route path="/kontakt" element={<ContactPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/povijest" element={<HistoryPage />} />
 
           {/* Protected routes (bijelo) - zahtijevaju autentifikaciju */}
           <Route
