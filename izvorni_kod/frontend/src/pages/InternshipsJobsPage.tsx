@@ -26,9 +26,14 @@ const InternshipsJobsPage = () => {
                         activeFilter === 'udaljeno' ? 'remote' : undefined;
 
             const res = await apiService.getJobs({ type: typeFilter });
-            setInternships(res.items || []);
+            if (res.items) {
+               setInternships(res.items);
+            } else {
+               setInternships([]);
+            }
          } catch (error) {
             console.error('Error loading internships:', error);
+            setInternships([]);
          } finally {
             setLoading(false);
          }

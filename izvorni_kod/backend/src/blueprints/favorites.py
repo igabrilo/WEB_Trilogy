@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 # Support both absolute and relative imports
 try:
@@ -11,6 +11,10 @@ except ImportError:
     from ..database import db
 
 favorites_bp = Blueprint('favorites', __name__, url_prefix='/api/favorites')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_favorites_routes(oauth_service):
     """Initialize favorites routes with services"""
@@ -37,7 +41,7 @@ def init_favorites_routes(oauth_service):
                 }), 400
             
             # Verify faculty exists
-            faculty = FacultyModel.query.filter_by(slug=faculty_slug).first()
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=faculty_slug).first()
             if not faculty:
                 return jsonify({
                     'success': False,
@@ -45,7 +49,7 @@ def init_favorites_routes(oauth_service):
                 }), 404
             
             # Check if already favorited
-            existing = FavoriteFacultyModel.query.filter_by(
+            existing = get_db().session.query(FavoriteFacultyModel).filter_by(
                 user_id=current_user_id,
                 faculty_slug=faculty_slug
             ).first()
@@ -66,7 +70,7 @@ def init_favorites_routes(oauth_service):
             }), 201
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to add favorite: {str(e)}'
@@ -77,7 +81,7 @@ def init_favorites_routes(oauth_service):
     def get_favorite_faculties(current_user_id, current_user_email, current_user_role):
         """Get user's favorite faculties"""
         try:
-            favorites = FavoriteFacultyModel.query.filter_by(user_id=current_user_id).all()
+            favorites = get_db().session.query(FavoriteFacultyModel).filter_by(user_id=current_user_id).all()
             favorites_list = [fav.to_dict() for fav in favorites]
             
             return jsonify({
@@ -97,7 +101,7 @@ def init_favorites_routes(oauth_service):
     def remove_favorite_faculty(faculty_slug, current_user_id, current_user_email, current_user_role):
         """Remove a faculty from user's favorites"""
         try:
-            favorite = FavoriteFacultyModel.query.filter_by(
+            favorite = get_db().session.query(FavoriteFacultyModel).filter_by(
                 user_id=current_user_id,
                 faculty_slug=faculty_slug
             ).first()
@@ -126,7 +130,7 @@ def init_favorites_routes(oauth_service):
     def check_favorite_faculty(faculty_slug, current_user_id, current_user_email, current_user_role):
         """Check if a faculty is in user's favorites"""
         try:
-            favorite = FavoriteFacultyModel.query.filter_by(
+            favorite = get_db().session.query(FavoriteFacultyModel).filter_by(
                 user_id=current_user_id,
                 faculty_slug=faculty_slug
             ).first()

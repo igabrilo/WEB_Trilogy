@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 
 # Support both absolute and relative imports
@@ -12,6 +12,10 @@ except ImportError:
     from ..database import db
 
 erasmus_bp = Blueprint('erasmus', __name__, url_prefix='/api/erasmus')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_erasmus_routes(oauth_service):
     """Initialize Erasmus routes with services"""
@@ -40,7 +44,7 @@ def init_erasmus_routes(oauth_service):
                     }), 400
             
             # Verify faculty exists
-            faculty = FacultyModel.query.filter_by(slug=data['facultySlug']).first()
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
             if not faculty:
                 return jsonify({
                     'success': False,
@@ -86,7 +90,7 @@ def init_erasmus_routes(oauth_service):
             }), 201
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create Erasmus project: {str(e)}'
@@ -100,7 +104,7 @@ def init_erasmus_routes(oauth_service):
             field_of_study = request.args.get('fieldOfStudy')
             
             # Start with all active projects
-            projects_query = ErasmusProjectModel.query.filter_by(status='active')
+            projects_query = get_db().session.query(ErasmusProjectModel).filter_by(status='active')
             
             # Filter by faculty
             if faculty_slug:
@@ -129,7 +133,7 @@ def init_erasmus_routes(oauth_service):
     def get_erasmus_project(project_id):
         """Get a single Erasmus project by ID"""
         try:
-            project = ErasmusProjectModel.query.get(project_id)
+            project = get_db().session.query(ErasmusProjectModel).get(project_id)
             if not project:
                 return jsonify({
                     'success': False,
@@ -159,7 +163,7 @@ def init_erasmus_routes(oauth_service):
                     'message': 'Only faculty members and administrators can update Erasmus projects'
                 }), 403
             
-            project = ErasmusProjectModel.query.get(project_id)
+            project = get_db().session.query(ErasmusProjectModel).get(project_id)
             if not project:
                 return jsonify({
                     'success': False,
@@ -182,7 +186,7 @@ def init_erasmus_routes(oauth_service):
                 project.description = data['description']
             if 'facultySlug' in data:
                 # Verify faculty exists
-                faculty = FacultyModel.query.filter_by(slug=data['facultySlug']).first()
+                faculty = get_db().session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
                 if not faculty:
                     return jsonify({
                         'success': False,
@@ -230,7 +234,7 @@ def init_erasmus_routes(oauth_service):
             }), 200
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update Erasmus project: {str(e)}'
@@ -248,7 +252,7 @@ def init_erasmus_routes(oauth_service):
                     'message': 'Only faculty members and administrators can delete Erasmus projects'
                 }), 403
             
-            project = ErasmusProjectModel.query.get(project_id)
+            project = get_db().session.query(ErasmusProjectModel).get(project_id)
             if not project:
                 return jsonify({
                     'success': False,

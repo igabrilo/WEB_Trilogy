@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import re
 from datetime import datetime
 
@@ -13,6 +13,10 @@ except ImportError:
     from ..database import db
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_admin_routes(oauth_service):
     """Initialize admin routes with services"""
@@ -48,9 +52,9 @@ def init_admin_routes(oauth_service):
             slug = re.sub(r'[-\s]+', '-', slug)
             
             # Check if slug already exists in database
-            existing_faculty = FacultyModel.query.filter_by(slug=slug).first()
+            existing_faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
             if existing_faculty:
-                faculty_count = FacultyModel.query.count()
+                faculty_count = get_db().session.query(FacultyModel).count()
                 slug = f"{slug}-{faculty_count + 1}"
             
             # Create faculty object in database
@@ -71,7 +75,7 @@ def init_admin_routes(oauth_service):
             
             # Add to database
             db.session.add(new_faculty)
-            db.session.commit()
+            get_db().session.commit()
             
             # Convert to dict for response
             faculty_dict = new_faculty.to_dict()
@@ -100,7 +104,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Get faculties from database
-            db_faculties = FacultyModel.query.all()
+            db_faculties = get_db().session.query(FacultyModel).all()
             db_faculties_list = [faculty.to_dict() for faculty in db_faculties]
             
             return jsonify({
@@ -127,7 +131,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Find faculty in database
-            faculty = FacultyModel.query.filter_by(slug=slug).first()
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
             
             if not faculty:
                 return jsonify({
@@ -162,7 +166,7 @@ def init_admin_routes(oauth_service):
                 faculty.contacts['website'] = data['website']
             
             # Commit changes to database
-            db.session.commit()
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
@@ -188,7 +192,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Delete from database
-            faculty = FacultyModel.query.filter_by(slug=slug).first()
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
             if not faculty:
                 return jsonify({
                     'success': False,
@@ -196,7 +200,7 @@ def init_admin_routes(oauth_service):
                 }), 404
             
             db.session.delete(faculty)
-            db.session.commit()
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
@@ -221,7 +225,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Get associations from database
-            db_associations = AssociationModel.query.all()
+            db_associations = get_db().session.query(AssociationModel).all()
             db_associations_list = [association.to_dict() for association in db_associations]
             
             return jsonify({
@@ -248,7 +252,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Find association in database
-            association = AssociationModel.query.filter_by(id=association_id).first()
+            association = get_db().session.query(AssociationModel).filter_by(id=association_id).first()
             
             if not association:
                 return jsonify({
@@ -279,7 +283,7 @@ def init_admin_routes(oauth_service):
                 association.links = data['links']
             
             # Commit changes to database
-            db.session.commit()
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
@@ -305,7 +309,7 @@ def init_admin_routes(oauth_service):
                 }), 403
             
             # Can only delete from database, not sample data
-            association = AssociationModel.query.filter_by(id=association_id).first()
+            association = get_db().session.query(AssociationModel).filter_by(id=association_id).first()
             if not association:
                 return jsonify({
                     'success': False,
@@ -313,7 +317,7 @@ def init_admin_routes(oauth_service):
                 }), 404
             
             db.session.delete(association)
-            db.session.commit()
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,

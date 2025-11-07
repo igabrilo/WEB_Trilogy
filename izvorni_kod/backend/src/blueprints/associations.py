@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import re
 from datetime import datetime
 from sqlalchemy import func
@@ -14,6 +14,10 @@ except ImportError:
     from ..database import db
 
 associations_bp = Blueprint('associations', __name__, url_prefix='/api/associations')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_associations_routes(oauth_service):
     """Initialize associations routes with services"""
@@ -46,7 +50,8 @@ def init_associations_routes(oauth_service):
             slug = re.sub(r'[-\s]+', '-', slug)
             
             # Check if slug already exists and make it unique
-            existing = AssociationModel.query.filter_by(slug=slug).first()
+            db_instance = get_db()
+            existing = db_instance.session.query(AssociationModel).filter_by(slug=slug).first()
             if existing:
                 # Simple unique slug generation
                 import uuid
@@ -76,7 +81,7 @@ def init_associations_routes(oauth_service):
             }), 201
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create association: {str(e)}'
@@ -95,7 +100,8 @@ def init_associations_routes(oauth_service):
                 }), 403
             
             # Find association
-            association = AssociationModel.query.get(association_id)
+            db_instance = get_db()
+            association = db_instance.session.query(AssociationModel).get(association_id)
             if not association:
                 return jsonify({
                     'success': False,
@@ -140,7 +146,7 @@ def init_associations_routes(oauth_service):
             }), 200
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update association: {str(e)}'

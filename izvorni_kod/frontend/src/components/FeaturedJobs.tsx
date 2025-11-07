@@ -14,9 +14,14 @@ const FeaturedJobs = () => {
       const loadJobs = async () => {
          try {
             const res = await apiService.getJobs({ type: 'job' });
-            setJobs(res.items.slice(0, 4)); // Show only first 4 featured jobs
+            if (res.items && res.items.length > 0) {
+               setJobs(res.items.slice(0, 4)); // Show only first 4 featured jobs
+            } else {
+               setJobs([]);
+            }
          } catch (error) {
             console.error('Error loading jobs:', error);
+            setJobs([]);
          } finally {
             setLoading(false);
          }

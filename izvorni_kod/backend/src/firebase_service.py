@@ -23,42 +23,76 @@ class FirebaseService:
         
         # Check if Firebase is already initialized
         if not firebase_admin._apps:
-            creds_path = app.config.get('FIREBASE_CREDENTIALS_PATH')
-            project_id = app.config.get('FIREBASE_PROJECT_ID')
+            creds_path = app.config.get('FIREBASE_CREDENTIALS_PATH', '')
+            project_id = app.config.get('FIREBASE_PROJECT_ID', '')
+            creds_json_env = os.environ.get('FIREBASE_CREDENTIALS_JSON', '')
             
-            if creds_path and os.path.exists(creds_path):
-                try:
-                    cred = credentials.Certificate(creds_path)
-                    firebase_admin.initialize_app(cred, {
-                        'projectId': project_id or None
-                    })
-                    self.initialized = True
-                except Exception as e:
-                    # Suppress importlib.metadata warnings for Python 3.9 compatibility
-                    if 'importlib.metadata' not in str(e) and 'packages_distributions' not in str(e):
-                        print(f"Firebase initialization error: {str(e)}")
-                    self.initialized = False
-            elif os.environ.get('FIREBASE_CREDENTIALS_JSON'):
-                # Alternative: use JSON string from environment
-                try:
-                    firebase_creds_json_str = os.environ.get('FIREBASE_CREDENTIALS_JSON')
-                    if firebase_creds_json_str:
-                        creds_json = json.loads(firebase_creds_json_str)
-                        cred = credentials.Certificate(creds_json)
-                        firebase_admin.initialize_app(cred, {
-                            'projectId': project_id or creds_json.get('project_id')
-                        })
+            # Method 1: Use credentials file path
+            if creds_path:
+                if os.path.exists(creds_path):
+                    try:
+                        cred = credentials.Certificate(creds_path)
+                        init_options = {}
+                        if project_id:
+                            init_options['projectId'] = project_id
+                        firebase_admin.initialize_app(cred, init_options)
                         self.initialized = True
-                    else:
+                        print(f"✅ Firebase initialized successfully from file: {creds_path}")
+                        if project_id:
+                            print(f"   Project ID: {project_id}")
+                        else:
+                            # Try to get project ID from credentials
+                            try:
+                                with open(creds_path, 'r') as f:
+                                    creds_data = json.load(f)
+                                    actual_project_id = creds_data.get('project_id')
+                                    if actual_project_id:
+                                        print(f"   Project ID: {actual_project_id}")
+                            except:
+                                pass
+                    except Exception as e:
+                        error_msg = str(e)
+                        # Suppress importlib.metadata warnings for Python 3.9 compatibility
+                        if 'importlib.metadata' not in error_msg and 'packages_distributions' not in error_msg:
+                            print(f"❌ Firebase initialization error: {error_msg}")
                         self.initialized = False
+                else:
+                    print(f"⚠️  Firebase credentials file not found: {creds_path}")
+                    self.initialized = False
+            # Method 2: Use JSON string from environment
+            elif creds_json_env:
+                try:
+                    creds_json = json.loads(creds_json_env)
+                    cred = credentials.Certificate(creds_json)
+                    init_options = {}
+                    if project_id:
+                        init_options['projectId'] = project_id
+                    elif creds_json.get('project_id'):
+                        init_options['projectId'] = creds_json.get('project_id')
+                    firebase_admin.initialize_app(cred, init_options)
+                    self.initialized = True
+                    print("✅ Firebase initialized successfully from environment variable")
+                    if project_id:
+                        print(f"   Project ID: {project_id}")
+                    elif creds_json.get('project_id'):
+                        print(f"   Project ID: {creds_json.get('project_id')}")
+                except json.JSONDecodeError as e:
+                    print(f"❌ Firebase credentials JSON is invalid: {str(e)}")
+                    self.initialized = False
                 except Exception as e:
+                    error_msg = str(e)
                     # Suppress importlib.metadata warnings for Python 3.9 compatibility
-                    if 'importlib.metadata' not in str(e) and 'packages_distributions' not in str(e):
-                        print(f"Firebase initialization error: {str(e)}")
+                    if 'importlib.metadata' not in error_msg and 'packages_distributions' not in error_msg:
+                        print(f"❌ Firebase initialization error: {error_msg}")
                     self.initialized = False
             else:
-                print("Warning: Firebase credentials not found. Notifications will be disabled.")
+                print("⚠️  Firebase credentials not found. Notifications will be disabled.")
+                print("   Set either FIREBASE_CREDENTIALS_PATH or FIREBASE_CREDENTIALS_JSON in .env")
                 self.initialized = False
+        else:
+            # Firebase already initialized
+            self.initialized = True
+            print("✅ Firebase already initialized")
     
     def send_notification(self, fcm_token, title, body, data=None):
         """Send push notification to a single device"""

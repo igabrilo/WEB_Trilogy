@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 # Support both absolute and relative imports
 try:
@@ -17,8 +17,40 @@ except ImportError:
 
 notifications_bp = Blueprint('notifications', __name__, url_prefix='/api/notifications')
 
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
+
 def init_notification_routes(oauth_service, firebase_service):
     """Initialize notification routes with services"""
+    
+    @notifications_bp.route('/firebase-status', methods=['GET'])
+    def firebase_status():
+        """Check Firebase initialization status (public endpoint for testing)"""
+        try:
+            status = {
+                'success': True,
+                'initialized': firebase_service.initialized,
+                'message': 'Firebase is initialized and ready' if firebase_service.initialized else 'Firebase is not initialized'
+            }
+            
+            if firebase_service.initialized:
+                # Try to get project info if available
+                try:
+                    import firebase_admin
+                    if firebase_admin._apps:
+                        app = firebase_admin.get_app()
+                        status['project_id'] = app.project_id if hasattr(app, 'project_id') else 'Unknown'
+                except:
+                    pass
+            
+            return jsonify(status), 200
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'initialized': False,
+                'message': f'Error checking Firebase status: {str(e)}'
+            }), 500
     
     @notifications_bp.route('/register-token', methods=['POST'])
     @oauth_service.token_required
@@ -49,7 +81,7 @@ def init_notification_routes(oauth_service, firebase_service):
             }), 200
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to register token: {str(e)}'
@@ -111,7 +143,7 @@ def init_notification_routes(oauth_service, firebase_service):
         """Mark notification as read"""
         try:
             # Find notification
-            notification = NotificationModel.query.filter_by(
+            notification = get_db().session.query(NotificationModel).filter_by(
                 id=notification_id,
                 user_id=current_user_id
             ).first()

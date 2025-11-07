@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, session
+from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
 import urllib.parse
 import json
 
@@ -15,6 +15,10 @@ except ImportError:
     from ..aai_service import AAIService, SAML_AVAILABLE, CAS_AVAILABLE
 
 aai_bp = Blueprint('aai', __name__, url_prefix='/api/aai')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_aai_routes(oauth_service, firebase_service, aai_service):
     """Initialize AAI@EduHr routes with services"""
@@ -59,7 +63,7 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
         """Initiate AAI@EduHr login"""
         try:
             # Get protocol from request (optional, uses configured protocol if not provided)
-            protocol = request.args.get('protocol') or request.json.get('protocol') if request.is_json else None
+            protocol = request.args.get('protocol') or (request.get_json() or {}).get('protocol')
             
             # Get email from request (for direct login) or redirect to AAI
             email = request.args.get('email') or (request.get_json() or {}).get('email')
@@ -128,7 +132,8 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
                 user_role = existing_user.role
             else:
                 # Check if user exists by provider
-                existing_user = UserModel.query.filter_by(
+                db_instance = get_db()
+                existing_user = db_instance.session.query(UserModel).filter_by(
                     provider='aai',
                     provider_id=user_info['provider_id']
                 ).first()

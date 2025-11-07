@@ -20,7 +20,10 @@ class Config:
     OAUTH2_API_BASE_URL = os.environ.get('OAUTH2_API_BASE_URL', '')
     
     # Firebase Configuration
+    # Option 1: Path to Firebase service account JSON file
     FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')
+    # Option 2: Firebase credentials as JSON string (alternative to file path)
+    # Set FIREBASE_CREDENTIALS_JSON in environment if not using file path
     FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', '')
     
     # JWT Configuration
@@ -88,6 +91,15 @@ class Config:
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
     OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
     OPENAI_BASE_URL = os.environ.get('OPENAI_BASE_URL', '')
+    
+    # Email Configuration (for notifications)
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME', ''))
 
 class DevelopmentConfig(Config):
     """Development configuration"""

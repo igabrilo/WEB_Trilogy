@@ -28,7 +28,7 @@ class User:
         self.id = user_id_counter
         user_id_counter += 1
         self.email = email
-        self.password = generate_password_hash(password) if password else None
+        self.password = generate_password_hash(password, method='pbkdf2:sha256') if password else None
         # For institutional roles (employer, faculty), use username; otherwise use firstName/lastName
         if username:
             self.username = username
@@ -166,7 +166,7 @@ class UserModel(db.Model):
     def __init__(self, email, password=None, first_name=None, last_name=None, username=None, 
                  role='student', faculty=None, interests=None, provider='local', provider_id=None):
         self.email = email
-        self.password_hash = generate_password_hash(password) if password else None
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256') if password else None
         
         # Handle institutional vs personal roles
         if username:
@@ -216,7 +216,7 @@ class UserModel(db.Model):
     
     def set_password(self, password):
         """Set user password"""
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
     
     @classmethod
     def find_by_email(cls, email):

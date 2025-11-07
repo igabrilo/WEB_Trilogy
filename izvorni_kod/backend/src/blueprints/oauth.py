@@ -66,15 +66,17 @@ def init_oauth_routes(oauth_service, firebase_service):
                         user_id = existing_user['id']
                         user_email = existing_user['email']
                         user_role = existing_user.get('role', 'student')
+                        user_provider = existing_user.get('provider', 'google')
                     else:
                         user_id = existing_user.id
                         user_email = existing_user.email
                         user_role = existing_user.role
+                        user_provider = existing_user.provider
                     
                     # IMPORTANT: If user logged in via Google OAuth, don't auto-assign admin role
                     # Admin role should only be assigned via email/password login with specific credentials
                     # This prevents Google OAuth users from getting admin access
-                    if user_role == 'admin' and existing_user.provider == 'google':
+                    if user_role == 'admin' and user_provider == 'google':
                         # Reset to student role for Google OAuth users (admin should use email/password)
                         if not isinstance(existing_user, dict):
                             existing_user.role = 'student'
@@ -87,7 +89,8 @@ def init_oauth_routes(oauth_service, firebase_service):
                     if existing_user:
                         # User exists with this email but different provider
                         # If user is admin, don't allow Google OAuth login (security measure)
-                        if existing_user.role == 'admin':
+                        existing_user_role = existing_user.get('role', 'student') if isinstance(existing_user, dict) else existing_user.role
+                        if existing_user_role == 'admin':
                             import urllib.parse
                             frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
                             error_msg = urllib.parse.quote('Admin accounts must use email/password login. Google OAuth is not allowed for admin accounts.')
