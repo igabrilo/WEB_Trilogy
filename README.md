@@ -1,5 +1,92 @@
 # WEB_Trilogy
 
+## UNIZG Career Hub - Database Migration Guide
+
+### Faza 1: Kreiranje SQLAlchemy modela ✅
+
+Ova faza transformira postojeći in-memory sustav u potpuno funkcionalni SQLAlchemy ORM sustav s PostgreSQL bazom podataka.
+
+#### 🏗️ **Što je napravljeno:**
+
+##### **1.1 Database Infrastructure**
+- ✅ **`database.py`** - SQLAlchemy i Flask-Migrate setup
+- ✅ **`config.py`** - Proširena konfiguracija za bazu podataka
+- ✅ **`requirements.txt`** - Dodani dependency-ji za SQLAlchemy
+
+##### **1.2 SQLAlchemy Models**
+Kreirani su svi SQLAlchemy modeli koji zamjenjuju in-memory storage:
+
+- ✅ **`UserModel`** - Korisnici (studenti, faculty, poslodavci, admin)
+- ✅ **`NotificationModel`** - Notifikacije
+- ✅ **`FCMTokenModel`** - Push notification tokeni
+- ✅ **`FacultyModel`** - Fakulteti
+- ✅ **`AssociationModel`** - Studentske udruge
+- ✅ **`JobModel`** - Poslovi i prakse
+- ✅ **`JobApplicationModel`** - Prijave na poslove
+- ✅ **`ChatSessionModel`** - Chatbot sesije
+
+##### **1.3 Database Features**
+- ✅ **Relationships** - Foreign key veze između modela
+- ✅ **Indexi** - Optimizacija za česte upite (email, role, user_id, etc.)
+- ✅ **Constraints** - Unique constraints za email, job applications
+- ✅ **JSON polja** - Za fleksibilne podatke (contacts, tags, messages)
+- ✅ **Timestamps** - Automatski created_at/updated_at
+
+##### **1.4 Migration Tools**
+- ✅ **`migrate.py`** - Skripta za inicijalizaciju i seeding baze
+- ✅ **`.env.template`** - Template za environment varijable
+- ✅ **Sample data** - Početni podaci za razvoj
+
+#### 🚀 **Kako pokrenuti:**
+
+##### **1. Instaliraj dependency-je:**
+```bash
+cd izvorni_kod/backend
+pip install -r requirements.txt
+```
+
+##### **2. Postavi environment:**
+```bash
+cp .env.template .env
+# Uredi .env s pravim vrijednostima
+```
+
+##### **3. Pokreni migracije:**
+```bash
+# Kreiranje svih tablica
+python migrate.py init
+
+# Dodavanje početnih podataka
+python migrate.py seed
+
+# Ili reset sve (drop + create + seed)
+python migrate.py reset
+```
+
+##### **4. Pokreni aplikaciju:**
+```bash
+python run.py
+```
+
+#### 📊 **Database Schema:**
+
+```sql
+users (id, email, password_hash, first_name, last_name, username, role, faculty, interests, provider, provider_id, is_active, created_at, updated_at)
+notifications (id, user_id, title, body, type, data, read, created_at)
+fcm_tokens (id, user_id, fcm_token, device_info, created_at)
+faculties (id, slug, name, abbreviation, type, contacts, created_at, updated_at)
+associations (id, slug, name, faculty, type, logo_text, logo_bg, short_description, description, tags, links, created_by, created_at, updated_at)
+jobs (id, title, description, type, company, location, salary, requirements, tags, status, created_by, created_at, updated_at)
+job_applications (id, job_id, user_id, message, status, created_at, updated_at)
+chat_sessions (id, user_id, messages, created_at, updated_at)
+```
+
+#### 🔄 **Sljedeći koraci (Faza 2):**
+- Refaktoriranje API endpointa za korištenje SQLAlchemy modela
+- Zamjena in-memory operacija s database pozivima
+- Error handling za database operacije
+- Testing novih funkcionalnosti
+
 # UNIZG Career Hub
 
 ## Opis web aplikacije

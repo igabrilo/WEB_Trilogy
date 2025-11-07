@@ -1,6 +1,6 @@
-// For browser requests, use localhost:5001 (host port mapping)
+// For browser requests, use localhost:5001 (backend port mapped from Docker)
 // The VITE_API_URL env var is for Docker internal network (backend:5000)
-// But browser requests need to go through the host port
+// But browser requests need to go through the host port 5001
 const API_URL = import.meta.env.VITE_API_URL?.includes('localhost')
   ? import.meta.env.VITE_API_URL
   : 'http://localhost:5001';
@@ -271,6 +271,10 @@ class ApiService {
     return this.request<ListResponse<Job>>(`/api/jobs${qp ? `?${qp}` : ''}`);
   }
 
+  async getJob(jobId: number): Promise<ItemResponse<Job>> {
+    return this.request<ItemResponse<Job>>(`/api/jobs/${jobId}`);
+  }
+
   async applyToJob(jobId: number, message?: string): Promise<ItemResponse<JobApplication>> {
     return this.request<ItemResponse<JobApplication>>(`/api/jobs/${jobId}/apply`, {
       method: 'POST',
@@ -297,6 +301,89 @@ class ApiService {
     });
   }
 
+  // Erasmus Projects API
+  async createErasmusProject(data: {
+    title: string;
+    description: string;
+    facultySlug: string;
+    country?: string;
+    university?: string;
+    fieldOfStudy?: string;
+    duration?: string;
+    applicationDeadline?: string;
+    requirements?: string[];
+    benefits?: string[];
+    contactEmail?: string;
+    contactPhone?: string;
+    website?: string;
+  }): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>('/api/erasmus', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getErasmusProjects(params?: { faculty?: string; fieldOfStudy?: string }): Promise<ListResponse<ErasmusProject>> {
+    const qs = new URLSearchParams();
+    if (params?.faculty) qs.append('faculty', params.faculty);
+    if (params?.fieldOfStudy) qs.append('fieldOfStudy', params.fieldOfStudy);
+    const qp = qs.toString();
+    return this.request<ListResponse<ErasmusProject>>(`/api/erasmus${qp ? `?${qp}` : ''}`);
+  }
+
+  async getErasmusProject(projectId: number): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>(`/api/erasmus/${projectId}`);
+  }
+
+  async updateErasmusProject(projectId: number, data: Partial<ErasmusProject>): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>(`/api/erasmus/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteErasmusProject(projectId: number): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/erasmus/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Favorites API
+  async addFavoriteFaculty(facultySlug: string): Promise<ItemResponse<FavoriteFaculty>> {
+    return this.request<ItemResponse<FavoriteFaculty>>('/api/favorites/faculties', {
+      method: 'POST',
+      body: JSON.stringify({ facultySlug: facultySlug }),
+    });
+  }
+
+  async getFavoriteFaculties(): Promise<ListResponse<FavoriteFaculty>> {
+    return this.request<ListResponse<FavoriteFaculty>>('/api/favorites/faculties');
+  }
+
+  async removeFavoriteFaculty(facultySlug: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/favorites/faculties/${facultySlug}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async checkFavoriteFaculty(facultySlug: string): Promise<{ success: boolean; isFavorite: boolean }> {
+    return this.request<{ success: boolean; isFavorite: boolean }>(`/api/favorites/faculties/${facultySlug}/check`);
+  }
+
+  // Profile update API
+  async updateProfile(data: {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    faculty?: string;
+    interests?: string[];
+  }): Promise<ItemResponse<User>> {
+    return this.request<ItemResponse<User>>('/api/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Admin endpoints
   async createFaculty(data: {
     name: string;
@@ -317,7 +404,15 @@ class ApiService {
     return this.request<ListResponse<Faculty>>('/api/admin/faculties');
   }
 
-  async updateFaculty(slug: string, data: Partial<Faculty>): Promise<ItemResponse<Faculty>> {
+  async updateFaculty(slug: string, data: {
+    name?: string;
+    type?: 'faculty' | 'academy';
+    abbreviation?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+  }): Promise<ItemResponse<Faculty>> {
     return this.request<ItemResponse<Faculty>>(`/api/admin/faculties/${slug}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -345,6 +440,36 @@ class ApiService {
     return this.request(`/api/admin/associations/${associationId}`, {
       method: 'DELETE',
     });
+  }
+
+  // Chatbot methods
+  async sendChatbotMessage(message: string, sessionId?: string, provider: string = 'smotra'): Promise<ChatbotResponse> {
+    return this.request<ChatbotResponse>('/api/chatbot/send', {
+      method: 'POST',
+      body: JSON.stringify({ message, session_id: sessionId, provider }),
+    });
+  }
+
+  async getChatbotHistory(sessionId?: string): Promise<{ success: boolean; messages: ChatMessage[]; session_id?: string }> {
+    const qs = new URLSearchParams();
+    if (sessionId) qs.append('session_id', sessionId);
+    return this.request(`/api/chatbot/history${qs.toString() ? `?${qs.toString()}` : ''}`);
+  }
+
+  async createChatbotSession(): Promise<{ success: boolean; session_id: string }> {
+    return this.request('/api/chatbot/session', {
+      method: 'POST',
+    });
+  }
+
+  async deleteChatbotSession(sessionId: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/chatbot/session/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getChatbotProviders(): Promise<{ success: boolean; providers: string[] }> {
+    return this.request('/api/chatbot/providers');
   }
 }
 
@@ -378,6 +503,56 @@ export interface JobApplication {
     title: string;
     type: string;
   };
+}
+
+export interface ErasmusProject {
+  id: number;
+  title: string;
+  description: string;
+  facultySlug: string;
+  facultyName?: string;
+  country?: string;
+  university?: string;
+  fieldOfStudy?: string;
+  duration?: string;
+  applicationDeadline?: string;
+  requirements?: string[];
+  benefits?: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  status: 'active' | 'archived';
+  createdBy: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FavoriteFaculty {
+  id: number;
+  userId: number;
+  facultySlug: string;
+  facultyName?: string;
+  createdAt?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  message: string;
+  timestamp?: string;
+}
+
+export interface ChatbotResponse {
+  success: boolean;
+  message?: string;
+  session_id?: string;
+  provider?: string;
+  error?: string;
+}
+
+export interface ChatbotSession {
+  session_id: string;
+  messages: ChatMessage[];
+  created_at?: string;
 }
 
 export const apiService = new ApiService();

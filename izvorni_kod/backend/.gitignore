@@ -16,7 +16,8 @@ instance/
 .webassets-cache
 
 # Environment variables
-# .env - REMOVED FROM GITIGNORE TO ALLOW SHARING (development only)
+# .env - Explicitly tracked (not ignored) to allow sharing (development only)
+!.env
 .env.local
 
 # IDE

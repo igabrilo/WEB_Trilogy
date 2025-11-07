@@ -1,24 +1,22 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import re
 from datetime import datetime
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel, FacultyModel, AssociationModel
     from oauth2_service import OAuth2Service
-    from blueprints.search import FACULTIES_DATA
-    from blueprints.associations import ASSOCIATIONS_STORAGE
+    from database import db
 except ImportError:
-    from ..models import User
+    from ..models import UserModel, FacultyModel, AssociationModel
     from ..oauth2_service import OAuth2Service
-    from ..blueprints.search import FACULTIES_DATA
-    from ..blueprints.associations import ASSOCIATIONS_STORAGE
+    from ..database import db
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
-# In-memory storage for faculties (in production, use database)
-# Export this so search.py can use it
-FACULTIES_STORAGE = []
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_admin_routes(oauth_service):
     """Initialize admin routes with services"""
@@ -53,33 +51,39 @@ def init_admin_routes(oauth_service):
             slug = re.sub(r'[^\w\s-]', '', data['name']).strip().lower()
             slug = re.sub(r'[-\s]+', '-', slug)
             
-            # Check if slug already exists
-            all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
-            existing = next((f for f in all_faculties if f.get('slug') == slug), None)
-            if existing:
-                slug = f"{slug}-{len(FACULTIES_STORAGE) + 1}"
+            # Check if slug already exists in database
+            existing_faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
+            if existing_faculty:
+                faculty_count = get_db().session.query(FacultyModel).count()
+                slug = f"{slug}-{faculty_count + 1}"
             
-            # Create faculty
-            new_faculty = {
-                'slug': slug,
-                'name': data['name'],
-                'abbreviation': data.get('abbreviation', ''),
-                'type': data['type'],  # 'faculty' or 'academy'
-                'contacts': {
-                    'email': data.get('email'),
-                    'phone': data.get('phone'),
-                    'address': data.get('address'),
-                    'website': data.get('website')
-                },
-                'createdAt': datetime.utcnow().isoformat()
+            # Create faculty object in database
+            contacts = {
+                'email': data.get('email'),
+                'phone': data.get('phone'),
+                'address': data.get('address'),
+                'website': data.get('website')
             }
             
-            FACULTIES_STORAGE.append(new_faculty)
+            new_faculty = FacultyModel(
+                slug=slug,
+                name=data['name'],
+                type=data['type'],  # 'faculty' or 'academy'
+                abbreviation=data.get('abbreviation', ''),
+                contacts=contacts
+            )
+            
+            # Add to database
+            db.session.add(new_faculty)
+            get_db().session.commit()
+            
+            # Convert to dict for response
+            faculty_dict = new_faculty.to_dict()
             
             return jsonify({
                 'success': True,
                 'message': 'Faculty created successfully',
-                'item': new_faculty
+                'item': faculty_dict
             }), 201
             
         except Exception as e:
@@ -99,12 +103,14 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can view all faculties'
                 }), 403
             
-            all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
+            # Get faculties from database
+            db_faculties = get_db().session.query(FacultyModel).all()
+            db_faculties_list = [faculty.to_dict() for faculty in db_faculties]
             
             return jsonify({
                 'success': True,
-                'count': len(all_faculties),
-                'items': all_faculties
+                'count': len(db_faculties_list),
+                'items': db_faculties_list
             }), 200
             
         except Exception as e:
@@ -124,14 +130,8 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can update faculties'
                 }), 403
             
-            # Find faculty in storage first, then in mock data
-            faculty = next((f for f in FACULTIES_STORAGE if f.get('slug') == slug), None)
-            if not faculty:
-                faculty = next((f for f in FACULTIES_DATA if f.get('slug') == slug), None)
-                if faculty:
-                    # Copy to storage for editing
-                    faculty = faculty.copy()
-                    FACULTIES_STORAGE.append(faculty)
+            # Find faculty in database
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
             
             if not faculty:
                 return jsonify({
@@ -143,34 +143,35 @@ def init_admin_routes(oauth_service):
             
             # Update fields
             if 'name' in data:
-                faculty['name'] = data['name']
+                faculty.name = data['name']
             if 'abbreviation' in data:
-                faculty['abbreviation'] = data['abbreviation']
+                faculty.abbreviation = data['abbreviation']
             if 'type' in data:
-                faculty['type'] = data['type']
+                faculty.type = data['type']
             if 'email' in data:
-                if 'contacts' not in faculty:
-                    faculty['contacts'] = {}
-                faculty['contacts']['email'] = data['email']
+                if faculty.contacts is None:
+                    faculty.contacts = {}
+                faculty.contacts['email'] = data['email']
             if 'phone' in data:
-                if 'contacts' not in faculty:
-                    faculty['contacts'] = {}
-                faculty['contacts']['phone'] = data['phone']
+                if faculty.contacts is None:
+                    faculty.contacts = {}
+                faculty.contacts['phone'] = data['phone']
             if 'address' in data:
-                if 'contacts' not in faculty:
-                    faculty['contacts'] = {}
-                faculty['contacts']['address'] = data['address']
+                if faculty.contacts is None:
+                    faculty.contacts = {}
+                faculty.contacts['address'] = data['address']
             if 'website' in data:
-                if 'contacts' not in faculty:
-                    faculty['contacts'] = {}
-                faculty['contacts']['website'] = data['website']
+                if faculty.contacts is None:
+                    faculty.contacts = {}
+                faculty.contacts['website'] = data['website']
             
-            faculty['updatedAt'] = datetime.utcnow().isoformat()
+            # Commit changes to database
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
                 'message': 'Faculty updated successfully',
-                'item': faculty
+                'item': faculty.to_dict()
             }), 200
             
         except Exception as e:
@@ -190,15 +191,16 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can delete faculties'
                 }), 403
             
-            # Can only delete from storage, not mock data
-            faculty = next((f for f in FACULTIES_STORAGE if f.get('slug') == slug), None)
+            # Delete from database
+            faculty = get_db().session.query(FacultyModel).filter_by(slug=slug).first()
             if not faculty:
                 return jsonify({
                     'success': False,
-                    'message': 'Faculty not found or cannot be deleted (is in system data)'
+                    'message': 'Faculty not found'
                 }), 404
             
-            FACULTIES_STORAGE.remove(faculty)
+            db.session.delete(faculty)
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
@@ -222,13 +224,14 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can view all associations'
                 }), 403
             
-            from blueprints.search import ASSOCIATIONS_DATA
-            all_associations = ASSOCIATIONS_DATA + ASSOCIATIONS_STORAGE
+            # Get associations from database
+            db_associations = get_db().session.query(AssociationModel).all()
+            db_associations_list = [association.to_dict() for association in db_associations]
             
             return jsonify({
                 'success': True,
-                'count': len(all_associations),
-                'items': all_associations
+                'count': len(db_associations_list),
+                'items': db_associations_list
             }), 200
             
         except Exception as e:
@@ -248,45 +251,44 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can update associations'
                 }), 403
             
-            # Find association
-            association = next((a for a in ASSOCIATIONS_STORAGE if a.get('id') == association_id), None)
+            # Find association in database
+            association = get_db().session.query(AssociationModel).filter_by(id=association_id).first()
+            
             if not association:
-                from blueprints.search import ASSOCIATIONS_DATA
-                association = next((a for a in ASSOCIATIONS_DATA if a.get('id') == association_id), None)
-                if not association:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Association not found'
-                    }), 404
+                return jsonify({
+                    'success': False,
+                    'message': 'Association not found'
+                }), 404
             
             data = request.get_json()
             
             # Update fields
             if 'name' in data:
-                association['name'] = data['name']
+                association.name = data['name']
             if 'faculty' in data:
-                association['faculty'] = data['faculty']
+                association.faculty = data['faculty']
             if 'type' in data:
-                association['type'] = data['type']
+                association.type = data['type']
             if 'logoText' in data:
-                association['logoText'] = data['logoText']
+                association.logo_text = data['logoText']
             if 'logoBg' in data:
-                association['logoBg'] = data['logoBg']
+                association.logo_bg = data['logoBg']
             if 'shortDescription' in data:
-                association['shortDescription'] = data['shortDescription']
+                association.short_description = data['shortDescription']
             if 'description' in data:
-                association['description'] = data['description']
+                association.description = data['description']
             if 'tags' in data:
-                association['tags'] = data['tags']
+                association.tags = data['tags']
             if 'links' in data:
-                association['links'] = data['links']
+                association.links = data['links']
             
-            association['updatedAt'] = datetime.utcnow().isoformat()
+            # Commit changes to database
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,
                 'message': 'Association updated successfully',
-                'item': association
+                'item': association.to_dict()
             }), 200
             
         except Exception as e:
@@ -306,15 +308,16 @@ def init_admin_routes(oauth_service):
                     'message': 'Only administrators can delete associations'
                 }), 403
             
-            # Can only delete from storage, not mock data
-            association = next((a for a in ASSOCIATIONS_STORAGE if a.get('id') == association_id), None)
+            # Can only delete from database, not sample data
+            association = get_db().session.query(AssociationModel).filter_by(id=association_id).first()
             if not association:
                 return jsonify({
                     'success': False,
                     'message': 'Association not found or cannot be deleted (is in system data)'
                 }), 404
             
-            ASSOCIATIONS_STORAGE.remove(association)
+            db.session.delete(association)
+            get_db().session.commit()
             
             return jsonify({
                 'success': True,

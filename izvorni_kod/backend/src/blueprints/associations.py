@@ -1,20 +1,23 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import re
 from datetime import datetime
+from sqlalchemy import func
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel, AssociationModel
     from oauth2_service import OAuth2Service
+    from database import db
 except ImportError:
-    from ..models import User
+    from ..models import UserModel, AssociationModel
     from ..oauth2_service import OAuth2Service
+    from ..database import db
 
 associations_bp = Blueprint('associations', __name__, url_prefix='/api/associations')
 
-# In-memory storage (in production, use a database)
-ASSOCIATIONS_STORAGE = []
-APPLICATIONS_STORAGE = []  # For internship/job applications
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_associations_routes(oauth_service):
     """Initialize associations routes with services"""
@@ -46,37 +49,39 @@ def init_associations_routes(oauth_service):
             slug = re.sub(r'[^\w\s-]', '', data['name']).strip().lower()
             slug = re.sub(r'[-\s]+', '-', slug)
             
-            # Check if slug already exists
-            existing = next((a for a in ASSOCIATIONS_STORAGE if a.get('slug') == slug), None)
+            # Check if slug already exists and make it unique
+            db_instance = get_db()
+            existing = db_instance.session.query(AssociationModel).filter_by(slug=slug).first()
             if existing:
-                slug = f"{slug}-{len(ASSOCIATIONS_STORAGE) + 1}"
+                # Simple unique slug generation
+                import uuid
+                slug = f"{slug}-{str(uuid.uuid4())[:8]}"
             
             # Create association
-            new_association = {
-                'id': len(ASSOCIATIONS_STORAGE) + 1,
-                'slug': slug,
-                'name': data['name'],
-                'faculty': data['faculty'],
-                'type': data.get('type', 'academic'),
-                'logoText': data.get('logoText', data['name'][:3].upper()),
-                'logoBg': data.get('logoBg', '#1e70bf'),
-                'shortDescription': data['shortDescription'],
-                'description': data.get('description', ''),
-                'tags': data.get('tags', []),
-                'links': data.get('links', {}),
-                'createdBy': current_user_id,
-                'createdAt': datetime.utcnow().isoformat()
-            }
+            new_association = AssociationModel(
+                slug=slug,
+                name=data['name'],
+                faculty=data['faculty'],
+                type=data.get('type', 'academic'),
+                logo_text=data.get('logoText', data['name'][:3].upper()),
+                logo_bg=data.get('logoBg', '#1e70bf'),
+                short_description=data['shortDescription'],
+                description=data.get('description', ''),
+                tags=data.get('tags', []),
+                links=data.get('links', {}),
+                created_by=current_user_id
+            )
             
-            ASSOCIATIONS_STORAGE.append(new_association)
+            new_association.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Association created successfully',
-                'item': new_association
+                'item': new_association.to_dict()
             }), 201
             
         except Exception as e:
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create association: {str(e)}'
@@ -95,7 +100,8 @@ def init_associations_routes(oauth_service):
                 }), 403
             
             # Find association
-            association = next((a for a in ASSOCIATIONS_STORAGE if a.get('id') == association_id), None)
+            db_instance = get_db()
+            association = db_instance.session.query(AssociationModel).get(association_id)
             if not association:
                 return jsonify({
                     'success': False,
@@ -103,7 +109,7 @@ def init_associations_routes(oauth_service):
                 }), 404
             
             # Check if user is creator
-            if association.get('createdBy') != current_user_id:
+            if association.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'Only the creator can update this association'
@@ -113,33 +119,34 @@ def init_associations_routes(oauth_service):
             
             # Update fields
             if 'name' in data:
-                association['name'] = data['name']
+                association.name = data['name']
             if 'faculty' in data:
-                association['faculty'] = data['faculty']
+                association.faculty = data['faculty']
             if 'type' in data:
-                association['type'] = data['type']
+                association.type = data['type']
             if 'logoText' in data:
-                association['logoText'] = data['logoText']
+                association.logo_text = data['logoText']
             if 'logoBg' in data:
-                association['logoBg'] = data['logoBg']
+                association.logo_bg = data['logoBg']
             if 'shortDescription' in data:
-                association['shortDescription'] = data['shortDescription']
+                association.short_description = data['shortDescription']
             if 'description' in data:
-                association['description'] = data['description']
+                association.description = data['description']
             if 'tags' in data:
-                association['tags'] = data['tags']
+                association.tags = data['tags']
             if 'links' in data:
-                association['links'] = data['links']
+                association.links = data['links']
             
-            association['updatedAt'] = datetime.utcnow().isoformat()
+            association.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Association updated successfully',
-                'item': association
+                'item': association.to_dict()
             }), 200
             
         except Exception as e:
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update association: {str(e)}'

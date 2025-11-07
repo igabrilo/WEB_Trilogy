@@ -29,11 +29,10 @@ const LoginPage = () => {
     faculty: 'Fakultet',
   };
   const roleLabel = useMemo(() => (selectedRole ? ROLE_LABELS[selectedRole] || '' : ''), [selectedRole]);
-  
+
   // Determine which login options to show based on role
   const showGoogleLogin = selectedRole !== 'faculty' && selectedRole !== 'fakultet';
   const showAAILogin = selectedRole === 'faculty' || selectedRole === 'fakultet';
-  const showEmailPassword = true; // Always available
 
   // Handle OAuth callback if token is in URL
   useEffect(() => {
@@ -57,24 +56,16 @@ const LoginPage = () => {
           const user = JSON.parse(decodedUserStr);
           localStorage.setItem('token', token);
           localStorage.setItem('user', JSON.stringify(user));
-          // Refresh user in context
+          // Refresh user in context and wait for it to complete
           refreshUser().then(() => {
-            // Clean URL and redirect
-            window.history.replaceState({}, '', '/prijava');
-            // After OAuth, send user to their profile landing if available
-            try {
-              const stored = localStorage.getItem('user');
-              if (stored) {
-                const u = JSON.parse(stored);
-                if (u?.role) {
-                  navigate(`/profil/${u.role}`);
-                  return;
-                }
-              }
-            } catch {}
-            navigate('/')
+            // Small delay to ensure state is updated
+            setTimeout(() => {
+              // Clean URL and redirect to home page
+              window.history.replaceState({}, '', '/prijava');
+              navigate('/');
+            }, 100);
           }).catch(() => {
-            // Even if refresh fails, redirect
+            // Even if refresh fails, redirect (user data is in localStorage)
             window.history.replaceState({}, '', '/prijava');
             navigate('/');
           });
@@ -84,7 +75,7 @@ const LoginPage = () => {
         }
       }
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, refreshUser]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,18 +108,11 @@ const LoginPage = () => {
       // If we get here, it's a successful login (AAI check passed or not needed)
       // Use the AuthContext login which handles token storage
       await login(formData);
-      // Redirect to role-specific landing if possible
-      try {
-        const stored = localStorage.getItem('user');
-        if (stored) {
-          const u = JSON.parse(stored);
-          if (u?.role) {
-            navigate(`/profil/${u.role}`);
-            return;
-          }
-        }
-      } catch {}
-      navigate(selectedRole ? `/profil/${selectedRole}` : '/');
+      // Small delay to ensure state is updated before navigation
+      setTimeout(() => {
+        // Redirect to home page which will show the appropriate dashboard
+        navigate('/');
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
@@ -149,7 +133,7 @@ const LoginPage = () => {
       setError('Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava.');
       return;
     }
-    
+
     setError('');
     setIsGoogleLoading(true);
     try {
@@ -179,7 +163,7 @@ const LoginPage = () => {
           {!selectedRole && (
             <div className="profile-selection-container auth-profile-picker" style={{ marginBottom: 24 }}>
               <div className="profile-grid">
-                {(['ucenik','student','alumni','employer','faculty'] as const).map((r) => (
+                {(['ucenik', 'student', 'alumni', 'employer', 'faculty'] as const).map((r) => (
                   <div
                     key={r}
                     className="profile-card animate-in"
@@ -314,7 +298,7 @@ const LoginPage = () => {
                 {showAAILogin && (
                   <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
                     <p style={{ margin: 0, fontSize: '0.875rem', color: '#0c4a6e' }}>
-                      <strong>Napomena:</strong> Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava. 
+                      <strong>Napomena:</strong> Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava.
                       Unesite email adresu s fakultetske domene i bit ćete preusmjereni na AAI@EduHr prijavu.
                     </p>
                   </div>

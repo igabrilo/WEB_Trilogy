@@ -85,6 +85,13 @@ export default function StudentDashboard() {
               </svg>
               <span>Studentske udruge</span>
             </button>
+            <button className="quick-link-card" onClick={() => navigate('/erasmus')}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                <path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Erasmus projekti</span>
+            </button>
             <button className="quick-link-card" onClick={() => navigate('/resursi')}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>

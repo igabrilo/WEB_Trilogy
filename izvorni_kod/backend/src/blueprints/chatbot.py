@@ -23,9 +23,9 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
     """Initialize chatbot routes with services"""
     
     @chatbot_bp.route('/send', methods=['POST'])
-    @oauth_service.token_required
-    def send_message(current_user_id, current_user_email, current_user_role):
-        """Send a message to the chatbot"""
+    @oauth_service.optional_token
+    def send_message(current_user_id=None, current_user_email=None, current_user_role=None, is_authenticated=False):
+        """Send a message to the chatbot (works with or without authentication)"""
         try:
             data = request.get_json()
             
@@ -44,18 +44,19 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
                 session_id = str(uuid.uuid4())
                 session['chatbot_session_id'] = session_id
                 conversation_sessions[session_id] = {
-                    'user_id': current_user_id,
+                    'user_id': current_user_id,  # Can be None for anonymous users
                     'created_at': datetime.now().isoformat(),
                     'messages': []
                 }
             
-            # Get context from session
+            # Get context from session (include user data if authenticated)
             context = {
-                'user_id': current_user_id,
-                'user_email': current_user_email,
-                'user_role': current_user_role,
                 'session_id': session_id
             }
+            if is_authenticated and current_user_id:
+                context['user_id'] = current_user_id
+                context['user_email'] = current_user_email
+                context['user_role'] = current_user_role
             
             # Send message to chatbot
             response = chatbot_service.send_message(
@@ -99,9 +100,9 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
             }), 500
     
     @chatbot_bp.route('/providers', methods=['GET'])
-    @oauth_service.token_required
-    def get_providers(current_user_id, current_user_email, current_user_role):
-        """Get list of available chatbot providers"""
+    @oauth_service.optional_token
+    def get_providers(current_user_id=None, current_user_email=None, current_user_role=None, is_authenticated=False):
+        """Get list of available chatbot providers (works with or without authentication)"""
         try:
             providers = chatbot_service.get_available_providers()
             
@@ -118,9 +119,9 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
             }), 500
     
     @chatbot_bp.route('/history', methods=['GET'])
-    @oauth_service.token_required
-    def get_conversation_history(current_user_id, current_user_email, current_user_role):
-        """Get conversation history for current session"""
+    @oauth_service.optional_token
+    def get_conversation_history(current_user_id=None, current_user_email=None, current_user_role=None, is_authenticated=False):
+        """Get conversation history for current session (works with or without authentication)"""
         try:
             session_id = request.args.get('session_id') or session.get('chatbot_session_id')
             
@@ -135,12 +136,14 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
             if session_id in conversation_sessions:
                 conversation = conversation_sessions[session_id]
                 
-                # Verify session belongs to user
-                if conversation['user_id'] != current_user_id:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Unauthorized: Session does not belong to user'
-                    }), 403
+                # Verify session belongs to user (if authenticated)
+                # Anonymous sessions can be accessed by anyone with the session_id
+                if is_authenticated and current_user_id:
+                    if conversation['user_id'] and conversation['user_id'] != current_user_id:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Unauthorized: Session does not belong to user'
+                        }), 403
                 
                 return jsonify({
                     'success': True,
@@ -162,15 +165,15 @@ def init_chatbot_routes(oauth_service, firebase_service, chatbot_service):
             }), 500
     
     @chatbot_bp.route('/session', methods=['POST'])
-    @oauth_service.token_required
-    def create_session(current_user_id, current_user_email, current_user_role):
-        """Create a new chatbot conversation session"""
+    @oauth_service.optional_token
+    def create_session(current_user_id=None, current_user_email=None, current_user_role=None, is_authenticated=False):
+        """Create a new chatbot conversation session (works with or without authentication)"""
         try:
             session_id = str(uuid.uuid4())
             session['chatbot_session_id'] = session_id
             
             conversation_sessions[session_id] = {
-                'user_id': current_user_id,
+                'user_id': current_user_id if is_authenticated else None,
                 'created_at': datetime.now().isoformat(),
                 'messages': []
             }

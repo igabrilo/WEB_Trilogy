@@ -1,22 +1,25 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import re
 from datetime import datetime
+from sqlalchemy import or_, func, text
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel, JobModel, JobApplicationModel, NotificationModel, FCMTokenModel
     from oauth2_service import OAuth2Service
+    from database import db
 except ImportError:
-    from ..models import User
+    from ..models import UserModel, JobModel, JobApplicationModel, NotificationModel, FCMTokenModel
     from ..oauth2_service import OAuth2Service
+    from ..database import db
 
 jobs_bp = Blueprint('jobs', __name__, url_prefix='/api/jobs')
 
-# In-memory storage (in production, use a database)
-JOBS_STORAGE = []
-APPLICATIONS_STORAGE = []
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
-def init_jobs_routes(oauth_service):
+def init_jobs_routes(oauth_service, email_service=None, firebase_service=None):
     """Initialize jobs routes with services"""
     
     @jobs_bp.route('', methods=['POST'])
@@ -42,32 +45,30 @@ def init_jobs_routes(oauth_service):
                         'message': f'Field {field} is required'
                     }), 400
             
-            # Create job posting
-            new_job = {
-                'id': len(JOBS_STORAGE) + 1,
-                'title': data['title'],
-                'description': data['description'],
-                'type': data['type'],  # 'internship', 'job', 'part-time', 'remote'
-                'company': data.get('company', ''),
-                'location': data.get('location', ''),
-                'salary': data.get('salary', ''),
-                'requirements': data.get('requirements', []),
-                'tags': data.get('tags', []),
-                'createdBy': current_user_id,
-                'createdAt': datetime.utcnow().isoformat(),
-                'status': 'active',
-                'applications': []
-            }
+            # Create job posting using JobModel
+            new_job = JobModel(
+                title=data['title'],
+                description=data['description'],
+                type=data['type'],  # 'internship', 'job', 'part-time', 'remote'
+                company=data.get('company', ''),
+                location=data.get('location', ''),
+                salary=data.get('salary', ''),
+                requirements=data.get('requirements', []),
+                tags=data.get('tags', []),
+                created_by=current_user_id,
+                status='active'
+            )
             
-            JOBS_STORAGE.append(new_job)
+            new_job.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Job posting created successfully',
-                'item': new_job
+                'item': new_job.to_dict()
             }), 201
             
         except Exception as e:
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create job posting: {str(e)}'
@@ -77,39 +78,65 @@ def init_jobs_routes(oauth_service):
     def get_jobs():
         """Get all job postings"""
         try:
+            db_instance = get_db()
             type_filter = request.args.get('type')
             query = request.args.get('q', '').strip()
             
-            jobs = JOBS_STORAGE.copy()
+            # Start with all active jobs using get_db().session.query
+            jobs_query = db_instance.session.query(JobModel).filter_by(status='active')
             
             # Filter by type
             if type_filter:
-                jobs = [j for j in jobs if j.get('type') == type_filter]
+                jobs_query = jobs_query.filter_by(type=type_filter)
             
             # Search by query
             if query:
-                query_lower = query.lower()
-                jobs = [j for j in jobs if 
-                       query_lower in j.get('title', '').lower() or
-                       query_lower in j.get('description', '').lower() or
-                       query_lower in j.get('company', '').lower()]
+                search_term = f"%{query.lower()}%"
+                jobs_query = jobs_query.filter(
+                    or_(
+                        text("LOWER(title) LIKE :search"),
+                        text("LOWER(description) LIKE :search"),
+                        text("LOWER(company) LIKE :search")
+                    ).params(search=search_term)
+                )
             
-            # Remove applications from response (only show count)
-            for job in jobs:
-                if 'applications' in job:
-                    job['applicationCount'] = len(job['applications'])
-                    del job['applications']
+            jobs = jobs_query.all()
+            jobs_list = [job.to_dict() for job in jobs]
             
             return jsonify({
                 'success': True,
-                'count': len(jobs),
-                'items': jobs
+                'count': len(jobs_list),
+                'items': jobs_list
+            }), 200
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'message': f'Failed to get jobs: {str(e)}'
+            }), 500
+    
+    @jobs_bp.route('/<int:job_id>', methods=['GET'])
+    def get_job(job_id):
+        """Get a single job posting by ID"""
+        try:
+            db_instance = get_db()
+            job = db_instance.session.query(JobModel).get(job_id)
+            if not job:
+                return jsonify({
+                    'success': False,
+                    'message': 'Job not found'
+                }), 404
+            
+            return jsonify({
+                'success': True,
+                'item': job.to_dict()
             }), 200
             
         except Exception as e:
             return jsonify({
                 'success': False,
-                'message': f'Failed to get jobs: {str(e)}'
+                'message': f'Failed to get job: {str(e)}'
             }), 500
     
     @jobs_bp.route('/<int:job_id>/apply', methods=['POST'])
@@ -125,7 +152,7 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == job_id), None)
+            job = get_db().session.query(JobModel).get(job_id)
             if not job:
                 return jsonify({
                     'success': False,
@@ -133,10 +160,11 @@ def init_jobs_routes(oauth_service):
                 }), 404
             
             # Check if already applied
-            existing_application = next(
-                (a for a in job.get('applications', []) if a.get('userId') == current_user_id),
-                None
-            )
+            existing_application = get_db().session.query(JobApplicationModel).filter_by(
+                job_id=job_id,
+                user_id=current_user_id
+            ).first()
+            
             if existing_application:
                 return jsonify({
                     'success': False,
@@ -146,26 +174,23 @@ def init_jobs_routes(oauth_service):
             data = request.get_json()
             
             # Create application
-            application = {
-                'id': len(APPLICATIONS_STORAGE) + 1,
-                'jobId': job_id,
-                'userId': current_user_id,
-                'userEmail': current_user_email,
-                'message': data.get('message', ''),
-                'status': 'pending',  # pending, approved, rejected
-                'createdAt': datetime.utcnow().isoformat()
-            }
+            application = JobApplicationModel(
+                job_id=job_id,
+                user_id=current_user_id,
+                message=data.get('message', ''),
+                status='pending'
+            )
             
-            APPLICATIONS_STORAGE.append(application)
-            job['applications'].append(application)
+            application.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Application submitted successfully',
-                'item': application
+                'item': application.to_dict()
             }), 201
             
         except Exception as e:
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to apply: {str(e)}'
@@ -184,7 +209,7 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == job_id), None)
+            job = get_db().session.query(JobModel).get(job_id)
             if not job:
                 return jsonify({
                     'success': False,
@@ -192,32 +217,21 @@ def init_jobs_routes(oauth_service):
                 }), 404
             
             # Check if user is creator
-            if job.get('createdBy') != current_user_id:
+            if job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only view applications for your own job postings'
                 }), 403
             
-            applications = job.get('applications', [])
+            # Get applications for this job
+            applications = get_db().session.query(JobApplicationModel).filter_by(job_id=job_id).all()
             
-            # Get user info for each application
-            for app in applications:
-                user = User.find_by_id(app.get('userId'))
-                if user:
-                    if isinstance(user, dict):
-                        app['user'] = {
-                            'id': user.get('id'),
-                            'email': user.get('email'),
-                            'firstName': user.get('firstName'),
-                            'lastName': user.get('lastName')
-                        }
-                    else:
-                        app['user'] = user.to_dict()
+            applications_list = [app.to_dict(include_user=True) for app in applications]
             
             return jsonify({
                 'success': True,
-                'count': len(applications),
-                'items': applications
+                'count': len(applications_list),
+                'items': applications_list
             }), 200
             
         except Exception as e:
@@ -238,31 +252,14 @@ def init_jobs_routes(oauth_service):
                     'message': 'Only employers can view applications'
                 }), 403
             
-            # Get all jobs created by this employer
-            employer_jobs = [j for j in JOBS_STORAGE if j.get('createdBy') == current_user_id]
+            # Get all jobs created by this employer and their applications
+            employer_jobs = get_db().session.query(JobModel).filter_by(created_by=current_user_id).all()
             
             all_applications = []
             for job in employer_jobs:
-                for app in job.get('applications', []):
-                    app_with_job = app.copy()
-                    app_with_job['job'] = {
-                        'id': job.get('id'),
-                        'title': job.get('title'),
-                        'type': job.get('type')
-                    }
-                    # Get user info
-                    user = User.find_by_id(app.get('userId'))
-                    if user:
-                        if isinstance(user, dict):
-                            app_with_job['user'] = {
-                                'id': user.get('id'),
-                                'email': user.get('email'),
-                                'firstName': user.get('firstName'),
-                                'lastName': user.get('lastName')
-                            }
-                        else:
-                            app_with_job['user'] = user.to_dict()
-                    all_applications.append(app_with_job)
+                applications = get_db().session.query(JobApplicationModel).filter_by(job_id=job.id).all()
+                for app in applications:
+                    all_applications.append(app.to_dict(include_user=True, include_job=True))
             
             return jsonify({
                 'success': True,
@@ -289,23 +286,16 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find application
-            application = next((a for a in APPLICATIONS_STORAGE if a.get('id') == application_id), None)
+            application = get_db().session.query(JobApplicationModel).get(application_id)
             if not application:
                 return jsonify({
                     'success': False,
                     'message': 'Application not found'
                 }), 404
             
-            # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == application.get('jobId')), None)
-            if not job:
-                return jsonify({
-                    'success': False,
-                    'message': 'Job not found'
-                }), 404
-            
-            # Check if user is job creator
-            if job.get('createdBy') != current_user_id:
+            # Find job and check if user is job creator
+            job = get_db().session.query(JobModel).get(application.job_id)
+            if not job or job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only update applications for your own job postings'
@@ -321,22 +311,120 @@ def init_jobs_routes(oauth_service):
                 }), 400
             
             # Update application status
-            application['status'] = new_status
-            application['updatedAt'] = datetime.utcnow().isoformat()
+            application.status = new_status
+            application.save()
             
-            # Update in job's applications list
-            job_app = next((a for a in job.get('applications', []) if a.get('id') == application_id), None)
-            if job_app:
-                job_app['status'] = new_status
-                job_app['updatedAt'] = application['updatedAt']
+            # Send notifications (email + in-app + push) if status is approved or rejected
+            email_sent = False
+            email_result = None
+            notification_created = False
             
-            return jsonify({
+            if new_status in ['approved', 'rejected']:
+                try:
+                    # Get applicant info
+                    applicant = get_db().session.query(UserModel).get(application.user_id)
+                    if applicant:
+                        # Get employer info (job creator)
+                        employer = get_db().session.query(UserModel).get(job.created_by)
+                        employer_name = employer.username if employer and employer.username else (
+                            f"{employer.first_name} {employer.last_name}".strip() if employer else None
+                        )
+                        employer_email = employer.email if employer else None
+                        
+                        # Get applicant name
+                        applicant_name = (
+                            f"{applicant.first_name} {applicant.last_name}".strip() 
+                            if applicant.first_name or applicant.last_name
+                            else applicant.email.split('@')[0]
+                        )
+                        
+                        # 1. Create in-app notification
+                        try:
+                            status_text = 'odobrena' if new_status == 'approved' else 'odbijena'
+                            notification_title = f'Prijava za posao "{job.title}" je {status_text}'
+                            notification_body = (
+                                f'Čestitamo! Vaša prijava za posao "{job.title}" je odobrena.'
+                                if new_status == 'approved'
+                                else f'Vaša prijava za posao "{job.title}" nije odobrena.'
+                            )
+                            
+                            notification = NotificationModel.create({
+                                'user_id': applicant.id,
+                                'title': notification_title,
+                                'body': notification_body,
+                                'type': 'success' if new_status == 'approved' else 'info',
+                                'data': {
+                                    'job_id': job.id,
+                                    'job_title': job.title,
+                                    'application_id': application.id,
+                                    'status': new_status
+                                }
+                            })
+                            notification_created = True
+                            
+                            # 2. Send push notification via Firebase
+                            if firebase_service and firebase_service.initialized:
+                                try:
+                                    user_tokens = FCMTokenModel.get_user_tokens(applicant.id)
+                                    if user_tokens:
+                                        fcm_tokens = [token.fcm_token for token in user_tokens]
+                                        firebase_service.send_multicast_notification(
+                                            fcm_tokens,
+                                            notification_title,
+                                            notification_body,
+                                            {
+                                                'notification_id': str(notification.id),
+                                                'job_id': str(job.id),
+                                                'application_id': str(application.id),
+                                                'status': new_status,
+                                                'type': 'job_application_status'
+                                            }
+                                        )
+                                except Exception as e:
+                                    print(f"Warning: Failed to send push notification: {str(e)}")
+                        except Exception as e:
+                            print(f"Warning: Failed to create in-app notification: {str(e)}")
+                        
+                        # 3. Send email notification
+                        if email_service and email_service.initialized:
+                            try:
+                                email_result = email_service.send_job_application_status_email(
+                                    applicant_email=applicant.email,
+                                    applicant_name=applicant_name,
+                                    job_title=job.title,
+                                    status=new_status,
+                                    employer_name=employer_name,
+                                    employer_email=employer_email
+                                )
+                                email_sent = email_result.get('success', False)
+                            except Exception as e:
+                                print(f"Warning: Failed to send email notification: {str(e)}")
+                                email_result = {'success': False, 'message': str(e)}
+                except Exception as e:
+                    # Don't fail the request if notification sending fails
+                    print(f"Warning: Failed to send notifications: {str(e)}")
+            
+            response_data = {
                 'success': True,
                 'message': f'Application {new_status} successfully',
-                'item': application
-            }), 200
+                'item': application.to_dict(),
+                'notifications': {
+                    'in_app': notification_created,
+                    'email_sent': email_sent,
+                    'push_sent': firebase_service and firebase_service.initialized and notification_created
+                }
+            }
+            
+            # Include email status in response
+            if email_service:
+                response_data['email_sent'] = email_sent
+                if email_result:
+                    response_data['email_result'] = email_result
+            
+            return jsonify(response_data), 200
             
         except Exception as e:
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update application status: {str(e)}'
@@ -355,23 +443,16 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find application
-            application = next((a for a in APPLICATIONS_STORAGE if a.get('id') == application_id), None)
+            application = get_db().session.query(JobApplicationModel).get(application_id)
             if not application:
                 return jsonify({
                     'success': False,
                     'message': 'Application not found'
                 }), 404
             
-            # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == application.get('jobId')), None)
-            if not job:
-                return jsonify({
-                    'success': False,
-                    'message': 'Job not found'
-                }), 404
-            
-            # Check if user is job creator
-            if job.get('createdBy') != current_user_id:
+            # Find job and check if user is job creator
+            job = get_db().session.query(JobModel).get(application.job_id)
+            if not job or job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only send emails for your own job postings'
@@ -387,20 +468,52 @@ def init_jobs_routes(oauth_service):
                     'message': 'Subject and message are required'
                 }), 400
             
-            # In production, send actual email here
-            # For now, just return success
-            # TODO: Integrate with email service (SMTP, SendGrid, etc.)
+            # Get applicant user info
+            applicant = get_db().session.query(UserModel).get(application.user_id)
+            if not applicant:
+                return jsonify({
+                    'success': False,
+                    'message': 'Applicant not found'
+                }), 404
             
-            return jsonify({
-                'success': True,
-                'message': f'Email sent to {application.get("userEmail")}',
-                'email': {
-                    'to': application.get('userEmail'),
-                    'subject': subject,
-                    'message': message,
-                    'sentAt': datetime.utcnow().isoformat()
+            # Send email using email service
+            email_sent = False
+            email_result = None
+            if email_service and email_service.initialized:
+                email_result = email_service.send_email(
+                    to=applicant.email,
+                    subject=subject,
+                    body=message,
+                    html_body=f"<html><body><p>{message.replace(chr(10), '<br>')}</p></body></html>"
+                )
+                email_sent = email_result.get('success', False)
+            else:
+                email_result = {
+                    'success': False,
+                    'message': 'Email service not configured'
                 }
-            }), 200
+            
+            if email_sent:
+                return jsonify({
+                    'success': True,
+                    'message': f'Email sent to {applicant.email}',
+                    'email': {
+                        'to': applicant.email,
+                        'subject': subject,
+                        'message': message,
+                        'sentAt': datetime.utcnow().isoformat()
+                    }
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'Failed to send email: {email_result.get("message", "Unknown error")}',
+                    'email': {
+                        'to': applicant.email,
+                        'subject': subject,
+                        'message': message
+                    }
+                }), 500
             
         except Exception as e:
             return jsonify({
