@@ -1008,3 +1008,77 @@ class FavoriteFacultyModel(db.Model):
     def __repr__(self):
         return f'<FavoriteFaculty User {self.user_id} -> Faculty {self.faculty_slug}>'
 
+class FacultyInquiryModel(db.Model):
+    """SQLAlchemy Faculty Inquiry model for inquiries/messages to faculties"""
+    __tablename__ = 'faculty_inquiries'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    faculty_slug = db.Column(db.String(100), db.ForeignKey('faculties.slug'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Optional - can be anonymous
+    sender_name = db.Column(db.String(200), nullable=False)
+    sender_email = db.Column(db.String(255), nullable=False)
+    subject = db.Column(db.String(500), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='pending', index=True)  # pending, read, replied
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+    replied_at = db.Column(db.DateTime, nullable=True)
+    reply_message = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    faculty = db.relationship('FacultyModel', foreign_keys=[faculty_slug])
+    user = db.relationship('UserModel', foreign_keys=[user_id])
+    
+    def __init__(self, faculty_slug, sender_name, sender_email, subject, message, user_id=None):
+        self.faculty_slug = faculty_slug
+        self.sender_name = sender_name
+        self.sender_email = sender_email
+        self.subject = subject
+        self.message = message
+        self.user_id = user_id
+        self.status = 'pending'
+    
+    def to_dict(self, include_faculty=False, include_user=False):
+        """Convert inquiry to dictionary"""
+        result = {
+            'id': self.id,
+            'facultySlug': self.faculty_slug,
+            'senderName': self.sender_name,
+            'senderEmail': self.sender_email,
+            'subject': self.subject,
+            'message': self.message,
+            'status': self.status,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'readAt': self.read_at.isoformat() if self.read_at else None,
+            'repliedAt': self.replied_at.isoformat() if self.replied_at else None,
+            'replyMessage': self.reply_message
+        }
+        
+        if self.user_id:
+            result['userId'] = self.user_id
+        
+        if include_faculty and self.faculty:
+            result['faculty'] = self.faculty.to_dict()
+        
+        if include_user and self.user:
+            result['user'] = self.user.to_dict()
+        
+        return result
+    
+    def mark_as_read(self):
+        """Mark inquiry as read"""
+        self.status = 'read'
+        if not self.read_at:
+            self.read_at = datetime.utcnow()
+    
+    def mark_as_replied(self, reply_message=None):
+        """Mark inquiry as replied"""
+        self.status = 'replied'
+        if not self.replied_at:
+            self.replied_at = datetime.utcnow()
+        if reply_message:
+            self.reply_message = reply_message
+    
+    def __repr__(self):
+        return f'<FacultyInquiry {self.id}: {self.subject} -> {self.faculty_slug}>'
+

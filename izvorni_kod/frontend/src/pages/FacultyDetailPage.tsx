@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { apiService, type Association, type Faculty } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import '../css/FacultyDetailPage.css';
 
 const colorFromSlug = (slug: string) => {
@@ -16,10 +17,28 @@ const colorFromSlug = (slug: string) => {
 export default function FacultyDetailPage() {
   const { slug = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [faculty, setFaculty] = useState<Faculty | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'pregled' | 'udruge'>('pregled');
+  
+  // Get initial tab from URL query parameter
+  const getTabFromUrl = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab') as 'pregled' | 'udruge' | 'upit' | null;
+    return (tabParam && ['pregled', 'udruge', 'upit'].includes(tabParam)) ? tabParam : 'pregled';
+  };
+  
+  const [tab, setTab] = useState<'pregled' | 'udruge' | 'upit'>(getTabFromUrl());
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [inquiryForm, setInquiryForm] = useState({
+    senderName: '',
+    senderEmail: '',
+    subject: '',
+    message: '',
+  });
+  const [inquiryLoading, setInquiryLoading] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -33,6 +52,17 @@ export default function FacultyDetailPage() {
     run();
   }, [slug]);
 
+  // Update tab when URL query parameter changes
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab') as 'pregled' | 'udruge' | 'upit' | null;
+    if (tabParam && ['pregled', 'udruge', 'upit'].includes(tabParam)) {
+      setTab(tabParam);
+    } else if (!tabParam) {
+      setTab('pregled');
+    }
+  }, [location.search]);
+
   useEffect(() => {
     const loadAssociations = async () => {
       if (!faculty?.abbreviation) return;
@@ -41,6 +71,40 @@ export default function FacultyDetailPage() {
     };
     if (tab === 'udruge') loadAssociations();
   }, [tab, faculty?.abbreviation]);
+
+  useEffect(() => {
+    // Pre-fill form if user is logged in
+    if (user && !inquiryForm.senderName && !inquiryForm.senderEmail) {
+      setInquiryForm(prev => ({
+        ...prev,
+        senderName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || '',
+        senderEmail: user.email || '',
+      }));
+    }
+  }, [user]);
+
+  const handleSendInquiry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!faculty) return;
+
+    setInquiryLoading(true);
+    setInquirySuccess(false);
+    try {
+      await apiService.sendFacultyInquiry({
+        facultySlug: faculty.slug,
+        ...inquiryForm,
+      });
+      setInquirySuccess(true);
+      setInquiryForm({ senderName: '', senderEmail: '', subject: '', message: '' });
+      setTimeout(() => {
+        setInquirySuccess(false);
+      }, 5000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Greška pri slanju upita');
+    } finally {
+      setInquiryLoading(false);
+    }
+  };
 
   const coverStyle = useMemo(() => ({ background: colorFromSlug(slug) }), [slug]);
   const logoText = faculty?.abbreviation || faculty?.name?.split(' ').map(w => w[0]).slice(0, 3).join('').toUpperCase();
@@ -72,8 +136,18 @@ export default function FacultyDetailPage() {
 
             <section className="container" style={{ padding: '1.5rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
               <nav className="faculty-tabs">
-                <button className={`tab ${tab === 'pregled' ? 'active' : ''}`} onClick={() => setTab('pregled')}>Pregled</button>
-                <button className={`tab ${tab === 'udruge' ? 'active' : ''}`} onClick={() => setTab('udruge')}>Udruge</button>
+                <button className={`tab ${tab === 'pregled' ? 'active' : ''}`} onClick={() => {
+                  setTab('pregled');
+                  navigate(`/fakulteti/${slug}`, { replace: true });
+                }}>Pregled</button>
+                <button className={`tab ${tab === 'udruge' ? 'active' : ''}`} onClick={() => {
+                  setTab('udruge');
+                  navigate(`/fakulteti/${slug}`, { replace: true });
+                }}>Udruge</button>
+                <button className={`tab ${tab === 'upit' ? 'active' : ''}`} onClick={() => {
+                  setTab('upit');
+                  navigate(`/fakulteti/${slug}?tab=upit`, { replace: true });
+                }}>Pošaljite upit</button>
               </nav>
 
               {tab === 'pregled' && (
@@ -131,6 +205,92 @@ export default function FacultyDetailPage() {
                       ))
                     )}
                   </div>
+                </div>
+              )}
+
+              {tab === 'upit' && (
+                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                  <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                    Pošaljite upit fakultetu
+                  </h2>
+                  {inquirySuccess && (
+                    <div style={{ padding: '1rem', marginBottom: '1.5rem', background: '#10b981', color: 'white', borderRadius: '8px' }}>
+                      Upit je uspješno poslan! Fakultet će vas kontaktirati ubrzo.
+                    </div>
+                  )}
+                  <form onSubmit={handleSendInquiry} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <label htmlFor="senderName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#334155' }}>
+                        Ime i prezime *
+                      </label>
+                      <input
+                        type="text"
+                        id="senderName"
+                        required
+                        value={inquiryForm.senderName}
+                        onChange={(e) => setInquiryForm(prev => ({ ...prev, senderName: e.target.value }))}
+                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '1rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="senderEmail" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#334155' }}>
+                        Email adresa *
+                      </label>
+                      <input
+                        type="email"
+                        id="senderEmail"
+                        required
+                        value={inquiryForm.senderEmail}
+                        onChange={(e) => setInquiryForm(prev => ({ ...prev, senderEmail: e.target.value }))}
+                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '1rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="subject" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#334155' }}>
+                        Predmet *
+                      </label>
+                      <input
+                        type="text"
+                        id="subject"
+                        required
+                        value={inquiryForm.subject}
+                        onChange={(e) => setInquiryForm(prev => ({ ...prev, subject: e.target.value }))}
+                        placeholder="npr. Pitanje o studijskim programima"
+                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '1rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="message" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#334155' }}>
+                        Poruka *
+                      </label>
+                      <textarea
+                        id="message"
+                        required
+                        rows={6}
+                        value={inquiryForm.message}
+                        onChange={(e) => setInquiryForm(prev => ({ ...prev, message: e.target.value }))}
+                        placeholder="Vaša poruka..."
+                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '1rem', fontFamily: 'inherit', resize: 'vertical' }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={inquiryLoading}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        background: inquiryLoading ? '#94a3b8' : '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        cursor: inquiryLoading ? 'not-allowed' : 'pointer',
+                        alignSelf: 'flex-start',
+                      }}
+                    >
+                      {inquiryLoading ? 'Slanje...' : 'Pošalji upit'}
+                    </button>
+                  </form>
                 </div>
               )}
             </section>

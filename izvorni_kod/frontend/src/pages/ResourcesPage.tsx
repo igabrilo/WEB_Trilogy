@@ -137,7 +137,12 @@ const ResourcesPage = () => {
                            </div>
                            <h3 className="resource-title">{resource.title}</h3>
                            <p className="resource-description">{resource.description}</p>
-                           <button className="resource-btn">Otvori</button>
+                           <button 
+                              className="resource-btn" 
+                              onClick={() => alert('Ova funkcionalnost će biti implementirana u sljedećoj fazi. Hvala na razumijevanju!')}
+                           >
+                              Otvori
+                           </button>
                         </div>
                      ))}
                   </div>

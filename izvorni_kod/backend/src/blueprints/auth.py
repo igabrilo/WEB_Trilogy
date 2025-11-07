@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 # Support both absolute and relative imports
 try:
@@ -17,6 +17,10 @@ except ImportError:
     from ..database import db
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_auth_routes(oauth_service, firebase_service, aai_service):
     """Initialize auth routes with services"""
@@ -53,7 +57,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     }), 400
             
             # Check if user already exists
-            existing_user = UserModel.find_by_email(data['email'])
+            db_instance = get_db()
+            existing_user = db_instance.session.query(UserModel).filter_by(email=data['email']).first()
             if existing_user:
                 return jsonify({
                     'success': False,
@@ -107,7 +112,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                         provider='local'
                     )
                 
-                new_user.save()
+                db_instance.session.add(new_user)
+                db_instance.session.commit()
                 
                 # Generate JWT token
                 token = oauth_service.generate_token(
@@ -124,7 +130,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 }), 201
                 
             except Exception as db_error:
-                db.session.rollback()
+                get_db().session.rollback()
                 return jsonify({
                     'success': False,
                     'message': f'Database error: {str(db_error)}'
@@ -169,7 +175,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     }), 401
                 
                 # Find or create admin user using SQLAlchemy
-                admin_user = UserModel.find_by_email(ADMIN_EMAIL)
+                db_instance = get_db()
+                admin_user = db_instance.session.query(UserModel).filter_by(email=ADMIN_EMAIL).first()
                 if not admin_user:
                     # Create admin user if doesn't exist
                     admin_user = UserModel(
@@ -180,12 +187,13 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                         role='admin',
                         provider='local'
                     )
-                    admin_user.save()
+                    db_instance.session.add(admin_user)
+                    db_instance.session.commit()
                 
                 # Ensure user has admin role
                 if admin_user.role != 'admin':
                     admin_user.role = 'admin'
-                    admin_user.save()
+                    db_instance.session.commit()
                 
                 # Generate token
                 token = oauth_service.generate_token(
@@ -220,7 +228,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 }), 400
             
             # Find user using SQLAlchemy
-            user = UserModel.find_by_email(email)
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).filter_by(email=email).first()
             
             if not user:
                 return jsonify({
@@ -260,7 +269,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
     def get_current_user(current_user_id, current_user_email, current_user_role):
         """Get current authenticated user"""
         try:
-            user = UserModel.find_by_id(current_user_id)
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).get(current_user_id)
             
             if not user:
                 return jsonify({
@@ -285,7 +295,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
     def update_current_user(current_user_id, current_user_email, current_user_role):
         """Update current authenticated user profile"""
         try:
-            user = UserModel.find_by_id(current_user_id)
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).get(current_user_id)
             
             if not user:
                 return jsonify({
@@ -308,7 +319,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 user.interests = data['interests']
             
             # Save changes
-            user.save()
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -317,7 +328,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
             }), 200
             
         except Exception as e:
-            db.session.rollback()
+            get_db().session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update profile: {str(e)}'

@@ -471,6 +471,44 @@ class ApiService {
   async getChatbotProviders(): Promise<{ success: boolean; providers: string[] }> {
     return this.request('/api/chatbot/providers');
   }
+
+  // Faculty Inquiries
+  async sendFacultyInquiry(data: {
+    facultySlug: string;
+    senderName: string;
+    senderEmail: string;
+    subject: string;
+    message: string;
+  }): Promise<ItemResponse<FacultyInquiry>> {
+    return this.request<ItemResponse<FacultyInquiry>>('/api/inquiries/faculties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFacultyInquiries(facultySlug: string, status?: string): Promise<ListResponse<FacultyInquiry>> {
+    const qs = new URLSearchParams();
+    if (status) qs.append('status', status);
+    const qp = qs.toString();
+    return this.request<ListResponse<FacultyInquiry>>(`/api/inquiries/faculties/${facultySlug}${qp ? `?${qp}` : ''}`);
+  }
+
+  async getMyInquiries(): Promise<ListResponse<FacultyInquiry>> {
+    return this.request<ListResponse<FacultyInquiry>>('/api/inquiries/my');
+  }
+
+  async markInquiryRead(inquiryId: number): Promise<ItemResponse<FacultyInquiry>> {
+    return this.request<ItemResponse<FacultyInquiry>>(`/api/inquiries/${inquiryId}/read`, {
+      method: 'PUT',
+    });
+  }
+
+  async replyToInquiry(inquiryId: number, replyMessage: string): Promise<ItemResponse<FacultyInquiry>> {
+    return this.request<ItemResponse<FacultyInquiry>>(`/api/inquiries/${inquiryId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ replyMessage }),
+    });
+  }
 }
 
 export interface Job {
@@ -553,6 +591,23 @@ export interface ChatbotSession {
   session_id: string;
   messages: ChatMessage[];
   created_at?: string;
+}
+
+export interface FacultyInquiry {
+  id: number;
+  facultySlug: string;
+  userId?: number;
+  senderName: string;
+  senderEmail: string;
+  subject: string;
+  message: string;
+  status: 'pending' | 'read' | 'replied';
+  createdAt: string;
+  readAt?: string | null;
+  repliedAt?: string | null;
+  replyMessage?: string | null;
+  faculty?: Faculty;
+  user?: User;
 }
 
 export const apiService = new ApiService();

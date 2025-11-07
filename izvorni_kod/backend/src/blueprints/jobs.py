@@ -59,7 +59,9 @@ def init_jobs_routes(oauth_service, email_service=None, firebase_service=None):
                 status='active'
             )
             
-            new_job.save()
+            db_instance = get_db()
+            db_instance.session.add(new_job)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -181,7 +183,9 @@ def init_jobs_routes(oauth_service, email_service=None, firebase_service=None):
                 status='pending'
             )
             
-            application.save()
+            db_instance = get_db()
+            db_instance.session.add(application)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -311,8 +315,9 @@ def init_jobs_routes(oauth_service, email_service=None, firebase_service=None):
                 }), 400
             
             # Update application status
+            db_instance = get_db()
             application.status = new_status
-            application.save()
+            db_instance.session.commit()
             
             # Send notifications (email + in-app + push) if status is approved or rejected
             email_sent = False
@@ -348,24 +353,26 @@ def init_jobs_routes(oauth_service, email_service=None, firebase_service=None):
                                 else f'Vaša prijava za posao "{job.title}" nije odobrena.'
                             )
                             
-                            notification = NotificationModel.create({
-                                'user_id': applicant.id,
-                                'title': notification_title,
-                                'body': notification_body,
-                                'type': 'success' if new_status == 'approved' else 'info',
-                                'data': {
+                            notification = NotificationModel(
+                                user_id=applicant.id,
+                                title=notification_title,
+                                body=notification_body,
+                                type='success' if new_status == 'approved' else 'info',
+                                data={
                                     'job_id': job.id,
                                     'job_title': job.title,
                                     'application_id': application.id,
                                     'status': new_status
                                 }
-                            })
+                            )
+                            db_instance.session.add(notification)
+                            db_instance.session.commit()
                             notification_created = True
                             
                             # 2. Send push notification via Firebase
                             if firebase_service and firebase_service.initialized:
                                 try:
-                                    user_tokens = FCMTokenModel.get_user_tokens(applicant.id)
+                                    user_tokens = db_instance.session.query(FCMTokenModel).filter_by(user_id=applicant.id).all()
                                     if user_tokens:
                                         fcm_tokens = [token.fcm_token for token in user_tokens]
                                         firebase_service.send_multicast_notification(

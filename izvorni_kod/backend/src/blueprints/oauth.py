@@ -1,17 +1,21 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, session
+from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
 import json
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel
     from oauth2_service import OAuth2Service
     from firebase_service import FirebaseService
 except ImportError:
-    from ..models import User
+    from ..models import UserModel
     from ..oauth2_service import OAuth2Service
     from ..firebase_service import FirebaseService
 
 oauth_bp = Blueprint('oauth', __name__, url_prefix='/api/oauth')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_oauth_routes(oauth_service, firebase_service):
     """Initialize OAuth routes with services"""
@@ -57,39 +61,36 @@ def init_oauth_routes(oauth_service, firebase_service):
                     redirect_url = f"{frontend_url}/prijava?error=oauth_failed"
                     return redirect(redirect_url)
                 
-                # Check if user exists by provider
-                existing_user = User.find_by_provider('google', user_info['provider_id'])
+                # Check if user exists by provider (SQLAlchemy)
+                db_instance = get_db()
+                existing_user = db_instance.session.query(UserModel).filter_by(
+                    provider='google',
+                    provider_id=user_info['provider_id']
+                ).first()
                 
                 if existing_user:
                     # User exists - login
-                    if isinstance(existing_user, dict):
-                        user_id = existing_user['id']
-                        user_email = existing_user['email']
-                        user_role = existing_user.get('role', 'student')
-                        user_provider = existing_user.get('provider', 'google')
-                    else:
-                        user_id = existing_user.id
-                        user_email = existing_user.email
-                        user_role = existing_user.role
-                        user_provider = existing_user.provider
+                    user_id = existing_user.id
+                    user_email = existing_user.email
+                    user_role = existing_user.role
+                    user_provider = existing_user.provider
                     
                     # IMPORTANT: If user logged in via Google OAuth, don't auto-assign admin role
                     # Admin role should only be assigned via email/password login with specific credentials
                     # This prevents Google OAuth users from getting admin access
                     if user_role == 'admin' and user_provider == 'google':
                         # Reset to student role for Google OAuth users (admin should use email/password)
-                        if not isinstance(existing_user, dict):
-                            existing_user.role = 'student'
-                            existing_user.save()
+                        existing_user.role = 'student'
+                        db_instance.session.commit()
                         user_role = 'student'
                 else:
-                    # Check if user exists by email
-                    existing_user = User.find_by_email(user_info['email'])
+                    # Check if user exists by email (SQLAlchemy)
+                    existing_user = db_instance.session.query(UserModel).filter_by(email=user_info['email']).first()
                     
                     if existing_user:
                         # User exists with this email but different provider
                         # If user is admin, don't allow Google OAuth login (security measure)
-                        existing_user_role = existing_user.get('role', 'student') if isinstance(existing_user, dict) else existing_user.role
+                        existing_user_role = existing_user.role
                         if existing_user_role == 'admin':
                             import urllib.parse
                             frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
@@ -113,19 +114,18 @@ def init_oauth_routes(oauth_service, firebase_service):
                         redirect_url = f"{frontend_url}/prijava?error={error_msg}"
                         return redirect(redirect_url)
                     
-                    # Create new user (default to student, but can be employer)
-                    # For employers, they can use Google login
-                    # Use firstName as username for institutional roles (will be set later if needed)
-                    new_user = User.create({
-                        'email': user_info['email'],
-                        'password': None,  # No password for OAuth users
-                        'firstName': user_info['firstName'],
-                        'lastName': user_info['lastName'],
-                        'role': 'student',  # Default role, can be changed in profile
-                        'provider': 'google',
-                        'provider_id': user_info['provider_id']
-                    })
-                    
+                    # Create new user in database (default role student)
+                    new_user = UserModel(
+                        email=user_info['email'],
+                        password=None,  # No password for OAuth users
+                        first_name=user_info['firstName'],
+                        last_name=user_info['lastName'],
+                        role='student',  # Default role, can be changed in profile
+                        provider='google',
+                        provider_id=user_info['provider_id']
+                    )
+                    db_instance.session.add(new_user)
+                    db_instance.session.commit()
                     user_id = new_user.id
                     user_email = new_user.email
                     user_role = new_user.role
@@ -134,11 +134,13 @@ def init_oauth_routes(oauth_service, firebase_service):
                 token = oauth_service.generate_token(user_id, user_email, user_role)
                 
                 # Prepare user data for frontend
-                user_data = {
+                # Use DB user info if available, fallback to OAuth user_info
+                db_user = db_instance.session.query(UserModel).get(user_id)
+                user_data = db_user.to_dict() if db_user else {
                     'id': user_id,
                     'email': user_email,
-                    'firstName': user_info['firstName'],
-                    'lastName': user_info['lastName'],
+                    'firstName': user_info.get('firstName', ''),
+                    'lastName': user_info.get('lastName', ''),
                     'role': user_role
                 }
                 

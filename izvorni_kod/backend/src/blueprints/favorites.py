@@ -61,7 +61,10 @@ def init_favorites_routes(oauth_service):
                 }), 400
             
             # Create favorite
-            favorite = FavoriteFacultyModel.create(current_user_id, faculty_slug)
+            db_instance = get_db()
+            favorite = FavoriteFacultyModel(user_id=current_user_id, faculty_slug=faculty_slug)
+            db_instance.session.add(favorite)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -112,7 +115,9 @@ def init_favorites_routes(oauth_service):
                     'message': 'Favorite not found'
                 }), 404
             
-            favorite.delete()
+            db_instance = get_db()
+            db_instance.session.delete(favorite)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
