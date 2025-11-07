@@ -1,9 +1,9 @@
-// For browser requests, use localhost:5001 (host port mapping)
+// For browser requests, use localhost:5000 (backend port)
 // The VITE_API_URL env var is for Docker internal network (backend:5000)
 // But browser requests need to go through the host port
 const API_URL = import.meta.env.VITE_API_URL?.includes('localhost')
   ? import.meta.env.VITE_API_URL
-  : 'http://localhost:5001';
+  : 'http://localhost:5000';
 
 export interface LoginCredentials {
   email: string;

@@ -30,8 +30,15 @@ class Config:
     # CORS Configuration
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
     
-    # Database (for future use)
+    # Database Configuration
     DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_timeout': 20,
+        'pool_recycle': -1,
+        'pool_pre_ping': True
+    }
     
     # AAI@EduHr Configuration
     AAI_ENTITY_ID = os.environ.get('AAI_ENTITY_ID', 'https://aai.fer.hr/idp/shibboleth')

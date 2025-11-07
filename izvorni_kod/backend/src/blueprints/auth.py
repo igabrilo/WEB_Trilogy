@@ -2,17 +2,19 @@ from flask import Blueprint, request, jsonify
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel  # Import SQLAlchemy model
     from oauth2_service import OAuth2Service
     from firebase_service import FirebaseService
     from utils import is_faculty_email
     from aai_service import AAIService
+    from database import db
 except ImportError:
-    from ..models import User
+    from ..models import UserModel  # Import SQLAlchemy model
     from ..oauth2_service import OAuth2Service
     from ..firebase_service import FirebaseService
     from ..utils import is_faculty_email
     from ..aai_service import AAIService
+    from ..database import db
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -51,7 +53,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     }), 400
             
             # Check if user already exists
-            existing_user = User.find_by_email(data['email'])
+            existing_user = UserModel.find_by_email(data['email'])
             if existing_user:
                 return jsonify({
                     'success': False,
@@ -83,39 +85,50 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'message': 'Email adresa s fakultetske domene zahtijeva registraciju kao fakultet. Fakulteti se prijavljuju preko AAI@EduHr sustava.'
                 }), 400
             
-            # Create new user
-            user_data = {
-                'email': data['email'],
-                'password': data['password'],
-                'role': requested_role,
-                'provider': 'local'
-            }
-            
-            if is_institutional:
-                user_data['username'] = data['username']
-            else:
-                user_data['firstName'] = data['firstName']
-                user_data['lastName'] = data['lastName']
-                if 'faculty' in data:
-                    user_data['faculty'] = data['faculty']
-                if 'interests' in data:
-                    user_data['interests'] = data['interests']
-            
-            new_user = User.create(user_data)
-            
-            # Generate JWT token
-            token = oauth_service.generate_token(
-                new_user.id,
-                new_user.email,
-                new_user.role
-            )
-            
-            return jsonify({
-                'success': True,
-                'message': 'User registered successfully',
-                'user': new_user.to_dict(),
-                'token': token
-            }), 201
+            # Create new user using SQLAlchemy model
+            try:
+                if is_institutional:
+                    new_user = UserModel(
+                        email=data['email'],
+                        password=data['password'],
+                        username=data['username'],
+                        role=requested_role,
+                        provider='local'
+                    )
+                else:
+                    new_user = UserModel(
+                        email=data['email'],
+                        password=data['password'],
+                        first_name=data['firstName'],
+                        last_name=data['lastName'],
+                        role=requested_role,
+                        faculty=data.get('faculty'),
+                        interests=data.get('interests'),
+                        provider='local'
+                    )
+                
+                new_user.save()
+                
+                # Generate JWT token
+                token = oauth_service.generate_token(
+                    new_user.id,
+                    new_user.email,
+                    new_user.role
+                )
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'User registered successfully',
+                    'user': new_user.to_dict(),
+                    'token': token
+                }), 201
+                
+            except Exception as db_error:
+                db.session.rollback()
+                return jsonify({
+                    'success': False,
+                    'message': f'Database error: {str(db_error)}'
+                }), 500
             
         except Exception as e:
             return jsonify({
@@ -155,38 +168,28 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                         'message': 'Invalid email or password'
                     }), 401
                 
-                # Find or create admin user
-                admin_user = User.find_by_email(ADMIN_EMAIL)
+                # Find or create admin user using SQLAlchemy
+                admin_user = UserModel.find_by_email(ADMIN_EMAIL)
                 if not admin_user:
                     # Create admin user if doesn't exist
-                    admin_user = User.create({
-                        'email': ADMIN_EMAIL,
-                        'password': ADMIN_PASSWORD,
-                        'firstName': 'Admin',
-                        'lastName': 'User',
-                        'role': 'admin',
-                        'provider': 'local'
-                    })
+                    admin_user = UserModel(
+                        email=ADMIN_EMAIL,
+                        password=ADMIN_PASSWORD,
+                        first_name='Admin',
+                        last_name='User',
+                        role='admin',
+                        provider='local'
+                    )
+                    admin_user.save()
                 
-                # Ensure user has admin role and get user data
-                if isinstance(admin_user, dict):
-                    admin_user['role'] = 'admin'
-                    user_id = admin_user['id']
-                    user_response = {
-                        'id': admin_user['id'],
-                        'email': admin_user['email'],
-                        'firstName': admin_user.get('firstName', 'Admin'),
-                        'lastName': admin_user.get('lastName', 'User'),
-                        'role': 'admin'
-                    }
-                else:
+                # Ensure user has admin role
+                if admin_user.role != 'admin':
                     admin_user.role = 'admin'
-                    user_id = admin_user.id
-                    user_response = admin_user.to_dict()
+                    admin_user.save()
                 
                 # Generate token
                 token = oauth_service.generate_token(
-                    user_id,
+                    admin_user.id,
                     ADMIN_EMAIL,
                     'admin'
                 )
@@ -194,7 +197,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 return jsonify({
                     'success': True,
                     'message': 'Login successful',
-                    'user': user_response,
+                    'user': admin_user.to_dict(),
                     'token': token
                 }), 200
             
@@ -216,8 +219,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'message': 'Password is required for non-faculty emails'
                 }), 400
             
-            # Find user
-            user = User.find_by_email(email)
+            # Find user using SQLAlchemy
+            user = UserModel.find_by_email(email)
             
             if not user:
                 return jsonify({
@@ -225,52 +228,24 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'message': 'Invalid email or password'
                 }), 401
             
-            # Convert dict to User object if needed
-            if isinstance(user, dict):
-                # Legacy format - check password
-                from werkzeug.security import check_password_hash
-                user_password_hash = user.get('password')
-                if not user_password_hash or not check_password_hash(user_password_hash, data['password']):
-                    return jsonify({
-                        'success': False,
-                        'message': 'Invalid email or password'
-                    }), 401
-                
-                # Generate token
-                token = oauth_service.generate_token(
-                    user['id'],
-                    user['email'],
-                    user.get('role', 'student')
-                )
-                
-                user_response = {
-                    'id': user['id'],
-                    'email': user['email'],
-                    'firstName': user['firstName'],
-                    'lastName': user['lastName'],
-                    'role': user.get('role', 'student')
-                }
-            else:
-                # New User object
-                if not user.check_password(data['password']):
-                    return jsonify({
-                        'success': False,
-                        'message': 'Invalid email or password'
-                    }), 401
-                
-                # Generate token
-                token = oauth_service.generate_token(
-                    user.id,
-                    user.email,
-                    user.role
-                )
-                
-                user_response = user.to_dict()
+            # Check password
+            if not user.check_password(data['password']):
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid email or password'
+                }), 401
+            
+            # Generate token
+            token = oauth_service.generate_token(
+                user.id,
+                user.email,
+                user.role
+            )
             
             return jsonify({
                 'success': True,
                 'message': 'Login successful',
-                'user': user_response,
+                'user': user.to_dict(),
                 'token': token
             }), 200
             
@@ -285,7 +260,7 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
     def get_current_user(current_user_id, current_user_email, current_user_role):
         """Get current authenticated user"""
         try:
-            user = User.find_by_id(current_user_id)
+            user = UserModel.find_by_id(current_user_id)
             
             if not user:
                 return jsonify({
@@ -293,16 +268,8 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'message': 'User not found'
                 }), 404
             
-            if isinstance(user, dict):
-                user_response = {
-                    'id': user['id'],
-                    'email': user['email'],
-                    'firstName': user['firstName'],
-                    'lastName': user['lastName'],
-                    'role': user.get('role', 'student')
-                }
-            else:
-                user_response = user.to_dict()
+            # UserModel already has to_dict() method
+            user_response = user.to_dict()
             
             # Return user directly (not wrapped in success/message)
             return jsonify(user_response), 200

@@ -14,6 +14,7 @@ try:
     from firebase_service import FirebaseService
     from aai_service import AAIService
     from chatbot_service import ChatbotService
+    from database import init_db, create_tables, db  # Import database setup
     from blueprints.auth import auth_bp, init_auth_routes
     from blueprints.oauth import oauth_bp, init_oauth_routes
     from blueprints.notifications import notifications_bp, init_notification_routes
@@ -30,6 +31,7 @@ except ImportError:
     from .firebase_service import FirebaseService
     from .aai_service import AAIService
     from .chatbot_service import ChatbotService
+    from .database import init_db, create_tables  # Import database setup
     from .blueprints.auth import auth_bp, init_auth_routes
     from .blueprints.oauth import oauth_bp, init_oauth_routes
     from .blueprints.notifications import notifications_bp, init_notification_routes
@@ -50,6 +52,20 @@ def create_app(config_name=None):
     
     # Set session secret key FIRST (required for OAuth and AAI redirects)
     app.secret_key = app.config.get('SESSION_SECRET_KEY') or app.config.get('SECRET_KEY') or 'your-secret-key-change-in-production'
+    
+    # Initialize database
+    init_db(app)
+    
+    # Import models after db is initialized to avoid circular imports
+    with app.app_context():
+        try:
+            from . import models  # Import models to register them with SQLAlchemy
+        except ImportError:
+            import models
+    
+    # Create tables in development (in production, use migrations)
+    if config_name == 'development':
+        create_tables(app)
     
     # Initialize CORS - allow all origins in development, specific origins in production
     cors_origins = app.config.get('CORS_ORIGINS', ['*'])

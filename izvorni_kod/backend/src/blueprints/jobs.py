@@ -1,20 +1,19 @@
 from flask import Blueprint, request, jsonify
 import re
 from datetime import datetime
+from sqlalchemy import or_, func, text
 
 # Support both absolute and relative imports
 try:
-    from models import User
+    from models import UserModel, JobModel, JobApplicationModel
     from oauth2_service import OAuth2Service
+    from database import db
 except ImportError:
-    from ..models import User
+    from ..models import UserModel, JobModel, JobApplicationModel
     from ..oauth2_service import OAuth2Service
+    from ..database import db
 
 jobs_bp = Blueprint('jobs', __name__, url_prefix='/api/jobs')
-
-# In-memory storage (in production, use a database)
-JOBS_STORAGE = []
-APPLICATIONS_STORAGE = []
 
 def init_jobs_routes(oauth_service):
     """Initialize jobs routes with services"""
@@ -42,32 +41,30 @@ def init_jobs_routes(oauth_service):
                         'message': f'Field {field} is required'
                     }), 400
             
-            # Create job posting
-            new_job = {
-                'id': len(JOBS_STORAGE) + 1,
-                'title': data['title'],
-                'description': data['description'],
-                'type': data['type'],  # 'internship', 'job', 'part-time', 'remote'
-                'company': data.get('company', ''),
-                'location': data.get('location', ''),
-                'salary': data.get('salary', ''),
-                'requirements': data.get('requirements', []),
-                'tags': data.get('tags', []),
-                'createdBy': current_user_id,
-                'createdAt': datetime.utcnow().isoformat(),
-                'status': 'active',
-                'applications': []
-            }
+            # Create job posting using JobModel
+            new_job = JobModel(
+                title=data['title'],
+                description=data['description'],
+                type=data['type'],  # 'internship', 'job', 'part-time', 'remote'
+                company=data.get('company', ''),
+                location=data.get('location', ''),
+                salary=data.get('salary', ''),
+                requirements=data.get('requirements', []),
+                tags=data.get('tags', []),
+                created_by=current_user_id,
+                status='active'
+            )
             
-            JOBS_STORAGE.append(new_job)
+            new_job.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Job posting created successfully',
-                'item': new_job
+                'item': new_job.to_dict()
             }), 201
             
         except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create job posting: {str(e)}'
@@ -80,30 +77,31 @@ def init_jobs_routes(oauth_service):
             type_filter = request.args.get('type')
             query = request.args.get('q', '').strip()
             
-            jobs = JOBS_STORAGE.copy()
+            # Start with all active jobs
+            jobs_query = JobModel.query.filter_by(status='active')
             
             # Filter by type
             if type_filter:
-                jobs = [j for j in jobs if j.get('type') == type_filter]
+                jobs_query = jobs_query.filter_by(type=type_filter)
             
             # Search by query
             if query:
-                query_lower = query.lower()
-                jobs = [j for j in jobs if 
-                       query_lower in j.get('title', '').lower() or
-                       query_lower in j.get('description', '').lower() or
-                       query_lower in j.get('company', '').lower()]
+                search_term = f"%{query.lower()}%"
+                jobs_query = jobs_query.filter(
+                    or_(
+                        text("LOWER(title) LIKE :search"),
+                        text("LOWER(description) LIKE :search"),
+                        text("LOWER(company) LIKE :search")
+                    ).params(search=search_term)
+                )
             
-            # Remove applications from response (only show count)
-            for job in jobs:
-                if 'applications' in job:
-                    job['applicationCount'] = len(job['applications'])
-                    del job['applications']
+            jobs = jobs_query.all()
+            jobs_list = [job.to_dict() for job in jobs]
             
             return jsonify({
                 'success': True,
-                'count': len(jobs),
-                'items': jobs
+                'count': len(jobs_list),
+                'items': jobs_list
             }), 200
             
         except Exception as e:
@@ -125,7 +123,7 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == job_id), None)
+            job = JobModel.query.get(job_id)
             if not job:
                 return jsonify({
                     'success': False,
@@ -133,10 +131,11 @@ def init_jobs_routes(oauth_service):
                 }), 404
             
             # Check if already applied
-            existing_application = next(
-                (a for a in job.get('applications', []) if a.get('userId') == current_user_id),
-                None
-            )
+            existing_application = JobApplicationModel.query.filter_by(
+                job_id=job_id,
+                user_id=current_user_id
+            ).first()
+            
             if existing_application:
                 return jsonify({
                     'success': False,
@@ -146,26 +145,23 @@ def init_jobs_routes(oauth_service):
             data = request.get_json()
             
             # Create application
-            application = {
-                'id': len(APPLICATIONS_STORAGE) + 1,
-                'jobId': job_id,
-                'userId': current_user_id,
-                'userEmail': current_user_email,
-                'message': data.get('message', ''),
-                'status': 'pending',  # pending, approved, rejected
-                'createdAt': datetime.utcnow().isoformat()
-            }
+            application = JobApplicationModel(
+                job_id=job_id,
+                user_id=current_user_id,
+                message=data.get('message', ''),
+                status='pending'
+            )
             
-            APPLICATIONS_STORAGE.append(application)
-            job['applications'].append(application)
+            application.save()
             
             return jsonify({
                 'success': True,
                 'message': 'Application submitted successfully',
-                'item': application
+                'item': application.to_dict()
             }), 201
             
         except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to apply: {str(e)}'
@@ -184,7 +180,7 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == job_id), None)
+            job = JobModel.query.get(job_id)
             if not job:
                 return jsonify({
                     'success': False,
@@ -192,32 +188,21 @@ def init_jobs_routes(oauth_service):
                 }), 404
             
             # Check if user is creator
-            if job.get('createdBy') != current_user_id:
+            if job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only view applications for your own job postings'
                 }), 403
             
-            applications = job.get('applications', [])
+            # Get applications for this job
+            applications = JobApplicationModel.query.filter_by(job_id=job_id).all()
             
-            # Get user info for each application
-            for app in applications:
-                user = User.find_by_id(app.get('userId'))
-                if user:
-                    if isinstance(user, dict):
-                        app['user'] = {
-                            'id': user.get('id'),
-                            'email': user.get('email'),
-                            'firstName': user.get('firstName'),
-                            'lastName': user.get('lastName')
-                        }
-                    else:
-                        app['user'] = user.to_dict()
+            applications_list = [app.to_dict(include_user=True) for app in applications]
             
             return jsonify({
                 'success': True,
-                'count': len(applications),
-                'items': applications
+                'count': len(applications_list),
+                'items': applications_list
             }), 200
             
         except Exception as e:
@@ -238,31 +223,14 @@ def init_jobs_routes(oauth_service):
                     'message': 'Only employers can view applications'
                 }), 403
             
-            # Get all jobs created by this employer
-            employer_jobs = [j for j in JOBS_STORAGE if j.get('createdBy') == current_user_id]
+            # Get all jobs created by this employer and their applications
+            employer_jobs = JobModel.query.filter_by(created_by=current_user_id).all()
             
             all_applications = []
             for job in employer_jobs:
-                for app in job.get('applications', []):
-                    app_with_job = app.copy()
-                    app_with_job['job'] = {
-                        'id': job.get('id'),
-                        'title': job.get('title'),
-                        'type': job.get('type')
-                    }
-                    # Get user info
-                    user = User.find_by_id(app.get('userId'))
-                    if user:
-                        if isinstance(user, dict):
-                            app_with_job['user'] = {
-                                'id': user.get('id'),
-                                'email': user.get('email'),
-                                'firstName': user.get('firstName'),
-                                'lastName': user.get('lastName')
-                            }
-                        else:
-                            app_with_job['user'] = user.to_dict()
-                    all_applications.append(app_with_job)
+                applications = JobApplicationModel.query.filter_by(job_id=job.id).all()
+                for app in applications:
+                    all_applications.append(app.to_dict(include_user=True, include_job=True))
             
             return jsonify({
                 'success': True,
@@ -289,23 +257,16 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find application
-            application = next((a for a in APPLICATIONS_STORAGE if a.get('id') == application_id), None)
+            application = JobApplicationModel.query.get(application_id)
             if not application:
                 return jsonify({
                     'success': False,
                     'message': 'Application not found'
                 }), 404
             
-            # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == application.get('jobId')), None)
-            if not job:
-                return jsonify({
-                    'success': False,
-                    'message': 'Job not found'
-                }), 404
-            
-            # Check if user is job creator
-            if job.get('createdBy') != current_user_id:
+            # Find job and check if user is job creator
+            job = JobModel.query.get(application.job_id)
+            if not job or job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only update applications for your own job postings'
@@ -321,22 +282,17 @@ def init_jobs_routes(oauth_service):
                 }), 400
             
             # Update application status
-            application['status'] = new_status
-            application['updatedAt'] = datetime.utcnow().isoformat()
-            
-            # Update in job's applications list
-            job_app = next((a for a in job.get('applications', []) if a.get('id') == application_id), None)
-            if job_app:
-                job_app['status'] = new_status
-                job_app['updatedAt'] = application['updatedAt']
+            application.status = new_status
+            application.save()
             
             return jsonify({
                 'success': True,
                 'message': f'Application {new_status} successfully',
-                'item': application
+                'item': application.to_dict()
             }), 200
             
         except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update application status: {str(e)}'
@@ -355,23 +311,16 @@ def init_jobs_routes(oauth_service):
                 }), 403
             
             # Find application
-            application = next((a for a in APPLICATIONS_STORAGE if a.get('id') == application_id), None)
+            application = JobApplicationModel.query.get(application_id)
             if not application:
                 return jsonify({
                     'success': False,
                     'message': 'Application not found'
                 }), 404
             
-            # Find job
-            job = next((j for j in JOBS_STORAGE if j.get('id') == application.get('jobId')), None)
-            if not job:
-                return jsonify({
-                    'success': False,
-                    'message': 'Job not found'
-                }), 404
-            
-            # Check if user is job creator
-            if job.get('createdBy') != current_user_id:
+            # Find job and check if user is job creator
+            job = JobModel.query.get(application.job_id)
+            if not job or job.created_by != current_user_id:
                 return jsonify({
                     'success': False,
                     'message': 'You can only send emails for your own job postings'
@@ -387,15 +336,23 @@ def init_jobs_routes(oauth_service):
                     'message': 'Subject and message are required'
                 }), 400
             
+            # Get applicant user info
+            applicant = UserModel.query.get(application.user_id)
+            if not applicant:
+                return jsonify({
+                    'success': False,
+                    'message': 'Applicant not found'
+                }), 404
+            
             # In production, send actual email here
             # For now, just return success
             # TODO: Integrate with email service (SMTP, SendGrid, etc.)
             
             return jsonify({
                 'success': True,
-                'message': f'Email sent to {application.get("userEmail")}',
+                'message': f'Email sent to {applicant.email}',
                 'email': {
-                    'to': application.get('userEmail'),
+                    'to': applicant.email,
                     'subject': subject,
                     'message': message,
                     'sentAt': datetime.utcnow().isoformat()

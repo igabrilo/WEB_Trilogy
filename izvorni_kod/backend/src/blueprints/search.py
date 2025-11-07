@@ -3,15 +3,11 @@ from typing import Optional
 
 # Support both absolute and relative imports
 try:
-    from blueprints.associations import ASSOCIATIONS_STORAGE
-    from blueprints.admin import FACULTIES_STORAGE
+    from models import AssociationModel, FacultyModel
+    from database import db
 except ImportError:
-    try:
-        from ..blueprints.associations import ASSOCIATIONS_STORAGE
-        from ..blueprints.admin import FACULTIES_STORAGE
-    except ImportError:
-        ASSOCIATIONS_STORAGE = []
-        FACULTIES_STORAGE = []
+    from ..models import AssociationModel, FacultyModel
+    from ..database import db
 
 search_bp = Blueprint('search', __name__, url_prefix='/api')
 
@@ -233,8 +229,10 @@ def search_associations(query: str, faculty: Optional[str] = None):
     query_lower = query.lower()
     results = []
     
-    # Combine mock data with created associations
-    all_associations = ASSOCIATIONS_DATA + ASSOCIATIONS_STORAGE
+    # Combine mock data with database associations
+    db_associations = AssociationModel.query.all()
+    db_associations_list = [assoc.to_dict() for assoc in db_associations]
+    all_associations = ASSOCIATIONS_DATA + db_associations_list
     
     for assoc in all_associations:
         # Filter by faculty if specified
@@ -256,8 +254,10 @@ def search_faculties(query: str, faculty: Optional[str] = None):
     query_lower = query.lower()
     results = []
     
-    # Combine mock data with created faculties
-    all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
+    # Combine mock data with database faculties
+    db_faculties = FacultyModel.query.all()
+    db_faculties_list = [fac.to_dict() for fac in db_faculties]
+    all_faculties = FACULTIES_DATA + db_faculties_list
     
     for fac in all_faculties:
         # Filter by faculty abbreviation if specified (for filtering by user's faculty)
@@ -308,8 +308,10 @@ def get_associations():
     faculty = request.args.get('faculty', '').strip() or None
     query = request.args.get('q', '').strip() or None
     
-    # Combine mock data with created associations
-    results = ASSOCIATIONS_DATA + ASSOCIATIONS_STORAGE
+    # Combine mock data with database associations
+    db_associations = AssociationModel.query.all()
+    db_associations_list = [assoc.to_dict() for assoc in db_associations]
+    results = ASSOCIATIONS_DATA + db_associations_list
     
     # Filter by faculty
     if faculty:
@@ -328,12 +330,12 @@ def get_associations():
 @search_bp.route('/associations/<slug>', methods=['GET'])
 def get_association(slug):
     """Get a single association by slug"""
-    # Check in created associations first, then mock data
-    created_assoc = next((a for a in ASSOCIATIONS_STORAGE if a.get('slug') == slug), None)
-    if created_assoc:
+    # Check in database first, then mock data
+    db_assoc = AssociationModel.query.filter_by(slug=slug).first()
+    if db_assoc:
         return jsonify({
             'success': True,
-            'item': created_assoc
+            'item': db_assoc.to_dict()
         }), 200
     association = next((a for a in ASSOCIATIONS_DATA if a.get('slug') == slug), None)
     
@@ -353,14 +355,16 @@ def get_faculties():
     """Get all faculties, optionally filtered by search query"""
     query = request.args.get('q', '').strip() or None
     
-    # Combine mock data with created faculties
-    all_faculties = FACULTIES_DATA + FACULTIES_STORAGE
+    # Combine mock data with database faculties
+    db_faculties = FacultyModel.query.all()
+    db_faculties_list = [fac.to_dict() for fac in db_faculties]
+    all_faculties = FACULTIES_DATA + db_faculties_list
     
     if query:
         results = search_faculties(query)
-        # Also search in created faculties
+        # Also search in database faculties
         query_lower = query.lower()
-        for fac in FACULTIES_STORAGE:
+        for fac in db_faculties_list:
             name_match = query_lower in fac.get('name', '').lower()
             abbrev_match = query_lower in fac.get('abbreviation', '').lower()
             if name_match or abbrev_match:
@@ -378,9 +382,11 @@ def get_faculties():
 @search_bp.route('/faculties/<slug>', methods=['GET'])
 def get_faculty(slug):
     """Get a single faculty by slug"""
-    # Check in created faculties first, then mock data
-    faculty = next((f for f in FACULTIES_STORAGE if f.get('slug') == slug), None)
-    if not faculty:
+    # Check in database first, then mock data
+    db_faculty = FacultyModel.query.filter_by(slug=slug).first()
+    if db_faculty:
+        faculty = db_faculty.to_dict()
+    else:
         faculty = next((f for f in FACULTIES_DATA if f.get('slug') == slug), None)
     
     if not faculty:

@@ -2,9 +2,11 @@ from flask import Blueprint, request, jsonify
 
 # Support both absolute and relative imports
 try:
-    from models import Notification, User, fcm_tokens_db, notifications_db
+    from models import NotificationModel, UserModel, FCMTokenModel
+    from database import db
 except ImportError:
-    from ..models import Notification, User, fcm_tokens_db, notifications_db
+    from ..models import NotificationModel, UserModel, FCMTokenModel
+    from ..database import db
 
 try:
     from oauth2_service import OAuth2Service
@@ -34,21 +36,12 @@ def init_notification_routes(oauth_service, firebase_service):
             fcm_token = data['fcm_token']
             device_info = data.get('device_info', {})
             
-            # Store FCM token (in production, use database)
-            # fcm_tokens_db imported at top
-            
-            # Remove existing token for this user if exists
-            fcm_tokens_db[:] = [
-                token for token in fcm_tokens_db
-                if not (token.get('user_id') == current_user_id and token.get('fcm_token') == fcm_token)
-            ]
-            
-            # Add new token
-            fcm_tokens_db.append({
-                'user_id': current_user_id,
-                'fcm_token': fcm_token,
-                'device_info': device_info
-            })
+            # Create or update FCM token
+            FCMTokenModel.create(
+                user_id=current_user_id,
+                fcm_token=fcm_token,
+                device_info=device_info
+            )
             
             return jsonify({
                 'success': True,
@@ -56,6 +49,7 @@ def init_notification_routes(oauth_service, firebase_service):
             }), 200
             
         except Exception as e:
+            db.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to register token: {str(e)}'
@@ -77,12 +71,7 @@ def init_notification_routes(oauth_service, firebase_service):
             fcm_token = data['fcm_token']
             
             # Remove FCM token
-            from ..models import fcm_tokens_db
-            
-            fcm_tokens_db[:] = [
-                token for token in fcm_tokens_db
-                if not (token.get('user_id') == current_user_id and token.get('fcm_token') == fcm_token)
-            ]
+            FCMTokenModel.remove_token(current_user_id, fcm_token)
             
             return jsonify({
                 'success': True,
@@ -102,7 +91,7 @@ def init_notification_routes(oauth_service, firebase_service):
         try:
             unread_only = request.args.get('unread_only', 'false').lower() == 'true'
             
-            notifications = Notification.get_user_notifications(current_user_id, unread_only)
+            notifications = NotificationModel.get_user_notifications(current_user_id, unread_only)
             
             return jsonify({
                 'success': True,
@@ -121,18 +110,11 @@ def init_notification_routes(oauth_service, firebase_service):
     def mark_notification_read(current_user_id, current_user_email, current_user_role, notification_id):
         """Mark notification as read"""
         try:
-            # notifications_db imported at top
-            
             # Find notification
-            notification = None
-            for n in notifications_db:
-                if isinstance(n, dict):
-                    if n.get('id') == notification_id and n.get('user_id') == current_user_id:
-                        notification = n
-                        break
-                elif n.id == notification_id and n.user_id == current_user_id:
-                    notification = n
-                    break
+            notification = NotificationModel.query.filter_by(
+                id=notification_id,
+                user_id=current_user_id
+            ).first()
             
             if not notification:
                 return jsonify({
@@ -141,10 +123,8 @@ def init_notification_routes(oauth_service, firebase_service):
                 }), 404
             
             # Mark as read
-            if isinstance(notification, dict):
-                notification['read'] = True
-            else:
-                notification.read = True
+            notification.read = True
+            notification.save()
             
             return jsonify({
                 'success': True,
@@ -178,7 +158,7 @@ def init_notification_routes(oauth_service, firebase_service):
                 }), 400
             
             # Create notification
-            notification = Notification.create({
+            notification = NotificationModel.create({
                 'user_id': data['user_id'],
                 'title': data['title'],
                 'body': data['body'],
@@ -187,17 +167,12 @@ def init_notification_routes(oauth_service, firebase_service):
             })
             
             # Send push notification if FCM token exists
-            from ..models import fcm_tokens_db
-            
-            user_tokens = [
-                token.get('fcm_token')
-                for token in fcm_tokens_db
-                if token.get('user_id') == data['user_id']
-            ]
+            user_tokens = FCMTokenModel.get_user_tokens(data['user_id'])
             
             if user_tokens and firebase_service.initialized:
+                fcm_tokens = [token.fcm_token for token in user_tokens]
                 firebase_service.send_multicast_notification(
-                    user_tokens,
+                    fcm_tokens,
                     notification.title,
                     notification.body,
                     {'notification_id': str(notification.id), **notification.data}

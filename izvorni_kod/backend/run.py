@@ -12,7 +12,7 @@ sys.path.insert(0, src_path)
 # Import app after adding src to path
 # Type checking: app is in src/app.py
 if True:  # Always executed, but helps type checker
-    from app import create_app  # type: ignore[import-untyped]
+    from src.app import create_app  # Import from src package
 
 app = create_app()
 
