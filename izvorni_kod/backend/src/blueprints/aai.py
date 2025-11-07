@@ -123,7 +123,8 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
             email = user_info['email']
             
             # Check if user exists by email
-            existing_user = UserModel.find_by_email(email)
+            db_instance = get_db()
+            existing_user = db_instance.session.query(UserModel).filter_by(email=email).first()
             
             if existing_user:
                 # User exists - login
@@ -132,7 +133,6 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
                 user_role = existing_user.role
             else:
                 # Check if user exists by provider
-                db_instance = get_db()
                 existing_user = db_instance.session.query(UserModel).filter_by(
                     provider='aai',
                     provider_id=user_info['provider_id']
@@ -149,22 +149,29 @@ def init_aai_routes(oauth_service, firebase_service, aai_service):
                     default_role = 'faculty' if is_faculty_email(user_info['email']) else user_info.get('role', 'student')
                     
                     # For faculty, use firstName as username (institutional name)
-                    user_data = {
-                        'email': user_info['email'],
-                        'password': None,  # No password for AAI users
-                        'role': default_role,
-                        'provider': 'aai',
-                        'provider_id': user_info['provider_id']
-                    }
-                    
                     if default_role == 'faculty' or default_role == 'fakultet':
                         # For faculty, use firstName as username
-                        user_data['username'] = user_info.get('firstName', user_info.get('email', '').split('@')[0])
+                        new_user = UserModel(
+                            email=user_info['email'],
+                            password=None,  # No password for AAI users
+                            username=user_info.get('firstName', user_info.get('email', '').split('@')[0]),
+                            role=default_role,
+                            provider='aai',
+                            provider_id=user_info['provider_id']
+                        )
                     else:
-                        user_data['first_name'] = user_info.get('firstName', '')
-                        user_data['last_name'] = user_info.get('lastName', '')
+                        new_user = UserModel(
+                            email=user_info['email'],
+                            password=None,  # No password for AAI users
+                            first_name=user_info.get('firstName', ''),
+                            last_name=user_info.get('lastName', ''),
+                            role=default_role,
+                            provider='aai',
+                            provider_id=user_info['provider_id']
+                        )
                     
-                    new_user = UserModel.create(user_data)
+                    db_instance.session.add(new_user)
+                    db_instance.session.commit()
                     
                     user_id = new_user.id
                     user_email = new_user.email

@@ -205,17 +205,12 @@ const FacultiesPage = () => {
                                     >
                                        Saznaj više
                                     </button>
-                                    {isAuthenticated && (
-                                       <button
-                                          className="faculty-btn-secondary"
-                                          onClick={() => {
-                                             // TODO: Implementiraj slanje upita fakultetu
-                                             alert('Funkcija slanja upita će biti implementirana');
-                                          }}
-                                       >
-                                          Pošalji upit
-                                       </button>
-                                    )}
+                                    <button
+                                       className="faculty-btn-secondary"
+                                       onClick={() => navigate(`/fakulteti/${faculty.slug}?tab=upit`)}
+                                    >
+                                       Pošalji upit
+                                    </button>
                                  </div>
                               </div>
                            </div>

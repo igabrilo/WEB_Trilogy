@@ -72,7 +72,8 @@ def init_associations_routes(oauth_service):
                 created_by=current_user_id
             )
             
-            new_association.save()
+            db_instance.session.add(new_association)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -137,7 +138,7 @@ def init_associations_routes(oauth_service):
             if 'links' in data:
                 association.links = data['links']
             
-            association.save()
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,

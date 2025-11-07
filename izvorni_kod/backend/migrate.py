@@ -133,14 +133,312 @@ def seed_database(app):
                     'address': 'Svetošimunska cesta 25, 10000 Zagreb',
                     'website': 'https://www.agr.unizg.hr'
                 }
+            },
+            {
+                'slug': 'pf',
+                'name': 'Pravni fakultet',
+                'type': 'faculty',
+                'abbreviation': 'PF',
+                'contacts': {
+                    'email': 'info@pravo.hr',
+                    'phone': '+385 1 4896 500',
+                    'address': 'Trg Republike Hrvatske 14, 10000 Zagreb',
+                    'website': 'https://www.pravo.unizg.hr'
+                }
+            },
+            {
+                'slug': 'foi',
+                'name': 'Fakultet organizacije i informatike',
+                'type': 'faculty',
+                'abbreviation': 'FOI',
+                'contacts': {
+                    'email': 'info@foi.hr',
+                    'phone': '+385 1 2457 600',
+                    'address': 'Pavlinska 2, 42000 Varaždin',
+                    'website': 'https://www.foi.unizg.hr'
+                }
+            },
+            {
+                'slug': 'fbf',
+                'name': 'Farmaceutsko-biokemijski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'FBF',
+                'contacts': {
+                    'email': 'info@fbf.unizg.hr',
+                    'phone': '+385 1 6394 400',
+                    'address': 'Schrottova 20, 10000 Zagreb',
+                    'website': 'https://www.fbf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'veterina',
+                'name': 'Veterinarski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'VEF',
+                'contacts': {
+                    'email': 'info@vef.unizg.hr',
+                    'phone': '+385 1 2390 116',
+                    'address': 'Heinzelova 55, 10000 Zagreb',
+                    'website': 'https://www.vef.unizg.hr'
+                }
+            },
+            {
+                'slug': 'kif',
+                'name': 'Kineziološki fakultet',
+                'type': 'faculty',
+                'abbreviation': 'KIF',
+                'contacts': {
+                    'email': 'dekanat@kif.hr',
+                    'phone': '+385 1 3658 677',
+                    'address': 'Horvaćanska cesta 15, 10000 Zagreb',
+                    'website': 'https://www.kif.unizg.hr'
+                }
+            },
+            {
+                'slug': 'rgn',
+                'name': 'Rudarsko-geološko-naftni fakultet',
+                'type': 'faculty',
+                'abbreviation': 'RGN',
+                'contacts': {
+                    'email': 'info@rgn.unizg.hr',
+                    'phone': '+385 1 5535 800',
+                    'address': 'Pierottijeva 6, 10000 Zagreb',
+                    'website': 'https://www.rgn.unizg.hr'
+                }
+            },
+            {
+                'slug': 'tekstil',
+                'name': 'Tekstilno-tehnološki fakultet',
+                'type': 'faculty',
+                'abbreviation': 'TTF',
+                'contacts': {
+                    'email': 'info@ttf.unizg.hr',
+                    'phone': '+385 1 3712 555',
+                    'address': 'Prilaz baruna Filipovića 28a, 10000 Zagreb',
+                    'website': 'https://www.ttf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'kemija',
+                'name': 'Fakultet kemijskog inženjerstva i tehnologije',
+                'type': 'faculty',
+                'abbreviation': 'FKIT',
+                'contacts': {
+                    'email': 'info@fkit.unizg.hr',
+                    'phone': '+385 1 4597 111',
+                    'address': 'Marulićev trg 19, 10000 Zagreb',
+                    'website': 'https://www.fkit.unizg.hr'
+                }
+            },
+            {
+                'slug': 'geodezija',
+                'name': 'Geodetski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'GEOF',
+                'contacts': {
+                    'email': 'info@geof.hr',
+                    'phone': '+385 1 4639 200',
+                    'address': 'Kačićeva 26, 10000 Zagreb',
+                    'website': 'https://www.geof.unizg.hr'
+                }
+            },
+            {
+                'slug': 'promet',
+                'name': 'Fakultet prometnih znanosti',
+                'type': 'faculty',
+                'abbreviation': 'FPZ',
+                'contacts': {
+                    'email': 'info@fpz.unizg.hr',
+                    'phone': '+385 1 2384 222',
+                    'address': 'Vukelićeva 4, 10000 Zagreb',
+                    'website': 'https://www.fpz.unizg.hr'
+                }
+            },
+            {
+                'slug': 'stomatologija',
+                'name': 'Stomatološki fakultet',
+                'type': 'faculty',
+                'abbreviation': 'SFZG',
+                'contacts': {
+                    'email': 'info@sfzg.hr',
+                    'phone': '+385 1 4802 111',
+                    'address': 'Gundulićeva 5, 10000 Zagreb',
+                    'website': 'https://www.sfzg.unizg.hr'
+                }
+            },
+            {
+                'slug': 'medicina',
+                'name': 'Medicinski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'MFZG',
+                'contacts': {
+                    'email': 'info@mef.hr',
+                    'phone': '+385 1 4566 777',
+                    'address': 'Šalata 3, 10000 Zagreb',
+                    'website': 'https://www.mef.unizg.hr'
+                }
+            },
+            {
+                'slug': 'ufzg',
+                'name': 'Učiteljski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'UFZG',
+                'contacts': {
+                    'email': 'info@ufzg.hr',
+                    'phone': '+385 1 2394 300',
+                    'address': 'Savska cesta 77, 10000 Zagreb',
+                    'website': 'https://www.ufzg.unizg.hr'
+                }
+            },
+            {
+                'slug': 'teoloski',
+                'name': 'Katolički bogoslovni fakultet',
+                'type': 'faculty',
+                'abbreviation': 'KBF',
+                'contacts': {
+                    'email': 'info@kbf.unizg.hr',
+                    'phone': '+385 1 4890 577',
+                    'address': 'Vlaška 38, 10000 Zagreb',
+                    'website': 'https://www.kbf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'hrstud',
+                'name': 'Hrvatski studiji',
+                'type': 'faculty',
+                'abbreviation': 'HS',
+                'contacts': {
+                    'email': 'info@hrstud.unizg.hr',
+                    'phone': '+385 1 6112 700',
+                    'address': 'Borongajska cesta 83d, 10000 Zagreb',
+                    'website': 'https://www.hrstud.unizg.hr'
+                }
+            },
+            {
+                'slug': 'pbf',
+                'name': 'Prehrambeno-biotehnološki fakultet',
+                'type': 'faculty',
+                'abbreviation': 'PBF',
+                'contacts': {
+                    'email': 'info@pbf.unizg.hr',
+                    'phone': '+385 1 4605 027',
+                    'address': 'Pierottijeva 6, 10000 Zagreb',
+                    'website': 'https://www.pbf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'simet',
+                'name': 'Metalurški fakultet',
+                'type': 'faculty',
+                'abbreviation': 'SMS',
+                'contacts': {
+                    'email': 'info@simet.unizg.hr',
+                    'phone': '+385 1 5536 400',
+                    'address': 'Aleja narodnih heroja 3, 44000 Sisak',
+                    'website': 'https://www.simet.unizg.hr'
+                }
+            },
+            {
+                'slug': 'sumfak',
+                'name': 'Šumarski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'ŠUMFAK',
+                'contacts': {
+                    'email': 'info@sumfak.unizg.hr',
+                    'phone': '+385 1 2352 533',
+                    'address': 'Svetošimunska cesta 25, 10000 Zagreb',
+                    'website': 'https://www.sumfak.unizg.hr'
+                }
+            },
+            {
+                'slug': 'fpzg',
+                'name': 'Fakultet političkih znanosti',
+                'type': 'faculty',
+                'abbreviation': 'FPZG',
+                'contacts': {
+                    'email': 'info@fpzg.hr',
+                    'phone': '+385 1 4904 888',
+                    'address': 'Lepušićeva 6, 10000 Zagreb',
+                    'website': 'https://www.fpzg.unizg.hr'
+                }
+            },
+            {
+                'slug': 'erf',
+                'name': 'Edukacijsko-rehabilitacijski fakultet',
+                'type': 'faculty',
+                'abbreviation': 'ERF',
+                'contacts': {
+                    'email': 'info@erf.unizg.hr',
+                    'phone': '+385 1 2457 609',
+                    'address': 'Borcinska 83f, 10000 Zagreb',
+                    'website': 'https://www.erf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'grf',
+                'name': 'Grafički fakultet',
+                'type': 'faculty',
+                'abbreviation': 'GF',
+                'contacts': {
+                    'email': 'info@grf.unizg.hr',
+                    'phone': '+385 1 2371 500',
+                    'address': 'Getaldićeva 2, 10000 Zagreb',
+                    'website': 'https://www.grf.unizg.hr'
+                }
+            },
+            {
+                'slug': 'alu',
+                'name': 'Akademija likovnih umjetnosti',
+                'type': 'academy',
+                'abbreviation': 'ALU',
+                'contacts': {
+                    'email': 'info@alu.unizg.hr',
+                    'phone': '+385 1 4828 200',
+                    'address': 'Ilica 85, 10000 Zagreb',
+                    'website': 'https://www.alu.unizg.hr'
+                }
+            },
+            {
+                'slug': 'muza',
+                'name': 'Muzička akademija',
+                'type': 'academy',
+                'abbreviation': 'MA',
+                'contacts': {
+                    'email': 'info@muza.unizg.hr',
+                    'phone': '+385 1 4837 500',
+                    'address': 'Trg Republike Hrvatske 12, 10000 Zagreb',
+                    'website': 'https://www.muza.unizg.hr'
+                }
+            },
+            {
+                'slug': 'adu',
+                'name': 'Akademija dramske umjetnosti',
+                'type': 'academy',
+                'abbreviation': 'ADU',
+                'contacts': {
+                    'email': 'info@adu.hr',
+                    'phone': '+385 1 4871 444',
+                    'address': 'Trg Republike Hrvatske 5, 10000 Zagreb',
+                    'website': 'https://www.adu.hr'
+                }
             }
         ]
         
+        faculties_added = 0
+        faculties_existing = 0
         for faculty_data in faculties_data:
             existing = db.session.query(FacultyModel).filter_by(slug=faculty_data['slug']).first()
             if not existing:
                 faculty = FacultyModel(**faculty_data)
                 db.session.add(faculty)
+                faculties_added += 1
+                print(f"  ✓ Added: {faculty_data['name']} ({faculty_data['slug']})")
+            else:
+                faculties_existing += 1
+        
+        db.session.commit()
+        total_faculties = db.session.query(FacultyModel).count()
+        print(f"\nFaculties: {faculties_added} added, {faculties_existing} already exist, {total_faculties} total in database")
         
         # Create admin user
         admin_email = 'ivan.gabrilo@gmail.com'

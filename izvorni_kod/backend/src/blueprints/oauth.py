@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, session
+from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
 import json
 
 # Support both absolute and relative imports
@@ -12,6 +12,10 @@ except ImportError:
     from ..firebase_service import FirebaseService
 
 oauth_bp = Blueprint('oauth', __name__, url_prefix='/api/oauth')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
 
 def init_oauth_routes(oauth_service, firebase_service):
     """Initialize OAuth routes with services"""
@@ -58,7 +62,11 @@ def init_oauth_routes(oauth_service, firebase_service):
                     return redirect(redirect_url)
                 
                 # Check if user exists by provider (SQLAlchemy)
-                existing_user = UserModel.find_by_provider('google', user_info['provider_id'])
+                db_instance = get_db()
+                existing_user = db_instance.session.query(UserModel).filter_by(
+                    provider='google',
+                    provider_id=user_info['provider_id']
+                ).first()
                 
                 if existing_user:
                     # User exists - login
@@ -72,13 +80,12 @@ def init_oauth_routes(oauth_service, firebase_service):
                     # This prevents Google OAuth users from getting admin access
                     if user_role == 'admin' and user_provider == 'google':
                         # Reset to student role for Google OAuth users (admin should use email/password)
-                        if not isinstance(existing_user, dict):
-                            existing_user.role = 'student'
-                            existing_user.save()
+                        existing_user.role = 'student'
+                        db_instance.session.commit()
                         user_role = 'student'
                 else:
                     # Check if user exists by email (SQLAlchemy)
-                    existing_user = UserModel.find_by_email(user_info['email'])
+                    existing_user = db_instance.session.query(UserModel).filter_by(email=user_info['email']).first()
                     
                     if existing_user:
                         # User exists with this email but different provider
@@ -108,15 +115,17 @@ def init_oauth_routes(oauth_service, firebase_service):
                         return redirect(redirect_url)
                     
                     # Create new user in database (default role student)
-                    new_user = UserModel.create({
-                        'email': user_info['email'],
-                        'password': None,  # No password for OAuth users
-                        'firstName': user_info['firstName'],
-                        'lastName': user_info['lastName'],
-                        'role': 'student',  # Default role, can be changed in profile
-                        'provider': 'google',
-                        'provider_id': user_info['provider_id']
-                    })
+                    new_user = UserModel(
+                        email=user_info['email'],
+                        password=None,  # No password for OAuth users
+                        first_name=user_info['firstName'],
+                        last_name=user_info['lastName'],
+                        role='student',  # Default role, can be changed in profile
+                        provider='google',
+                        provider_id=user_info['provider_id']
+                    )
+                    db_instance.session.add(new_user)
+                    db_instance.session.commit()
                     user_id = new_user.id
                     user_email = new_user.email
                     user_role = new_user.role
@@ -126,7 +135,7 @@ def init_oauth_routes(oauth_service, firebase_service):
                 
                 # Prepare user data for frontend
                 # Use DB user info if available, fallback to OAuth user_info
-                db_user = UserModel.find_by_id(user_id)
+                db_user = db_instance.session.query(UserModel).get(user_id)
                 user_data = db_user.to_dict() if db_user else {
                     'id': user_id,
                     'email': user_email,

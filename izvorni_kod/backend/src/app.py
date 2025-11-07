@@ -67,6 +67,7 @@ def create_app(config_name=None):
             from .blueprints.admin import admin_bp, init_admin_routes
             from .blueprints.erasmus import erasmus_bp, init_erasmus_routes
             from .blueprints.favorites import favorites_bp, init_favorites_routes
+            from .blueprints.inquiries import inquiries_bp, init_inquiries_routes
         except ImportError:
             # Fallback to absolute imports if src is in Python path
             from blueprints.auth import auth_bp, init_auth_routes  # type: ignore
@@ -80,6 +81,7 @@ def create_app(config_name=None):
             from blueprints.admin import admin_bp, init_admin_routes  # type: ignore
             from blueprints.erasmus import erasmus_bp, init_erasmus_routes  # type: ignore
             from blueprints.favorites import favorites_bp, init_favorites_routes  # type: ignore
+            from blueprints.inquiries import inquiries_bp, init_inquiries_routes  # type: ignore
     
     # Initialize CORS - allow all origins in development, specific origins in production
     cors_origins = app.config.get('CORS_ORIGINS', ['*'])
@@ -108,6 +110,7 @@ def create_app(config_name=None):
         init_admin_routes(oauth_service)
         init_erasmus_routes(oauth_service)
         init_favorites_routes(oauth_service)
+        init_inquiries_routes(oauth_service, email_service)
         
         # Register blueprints
         app.register_blueprint(auth_bp)
@@ -121,6 +124,7 @@ def create_app(config_name=None):
         app.register_blueprint(admin_bp)
         app.register_blueprint(erasmus_bp)
         app.register_blueprint(favorites_bp)
+        app.register_blueprint(inquiries_bp)
     
     # Root endpoint
     @app.route("/")
@@ -137,6 +141,7 @@ def create_app(config_name=None):
                 "search": "/api/search",
                 "associations": "/api/associations",
                 "faculties": "/api/faculties",
+                "inquiries": "/api/inquiries",
                 "erasmus": "/api/erasmus",
                 "favorites": "/api/favorites"
             }

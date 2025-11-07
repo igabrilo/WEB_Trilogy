@@ -69,11 +69,23 @@ def init_notification_routes(oauth_service, firebase_service):
             device_info = data.get('device_info', {})
             
             # Create or update FCM token
-            FCMTokenModel.create(
+            db_instance = get_db()
+            existing = db_instance.session.query(FCMTokenModel).filter_by(
                 user_id=current_user_id,
-                fcm_token=fcm_token,
-                device_info=device_info
-            )
+                fcm_token=fcm_token
+            ).first()
+            
+            if existing:
+                existing.device_info = device_info or {}
+                db_instance.session.commit()
+            else:
+                token = FCMTokenModel(
+                    user_id=current_user_id,
+                    fcm_token=fcm_token,
+                    device_info=device_info
+                )
+                db_instance.session.add(token)
+                db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -103,7 +115,15 @@ def init_notification_routes(oauth_service, firebase_service):
             fcm_token = data['fcm_token']
             
             # Remove FCM token
-            FCMTokenModel.remove_token(current_user_id, fcm_token)
+            db_instance = get_db()
+            token = db_instance.session.query(FCMTokenModel).filter_by(
+                user_id=current_user_id,
+                fcm_token=fcm_token
+            ).first()
+            
+            if token:
+                db_instance.session.delete(token)
+                db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -123,7 +143,14 @@ def init_notification_routes(oauth_service, firebase_service):
         try:
             unread_only = request.args.get('unread_only', 'false').lower() == 'true'
             
-            notifications = NotificationModel.get_user_notifications(current_user_id, unread_only)
+            db_instance = get_db()
+            query = db_instance.session.query(NotificationModel).filter_by(user_id=current_user_id)
+            
+            if unread_only:
+                query = query.filter_by(read=False)
+            
+            notifications_list = query.order_by(NotificationModel.created_at.desc()).all()
+            notifications = [n.to_dict() for n in notifications_list]
             
             return jsonify({
                 'success': True,
@@ -155,8 +182,9 @@ def init_notification_routes(oauth_service, firebase_service):
                 }), 404
             
             # Mark as read
+            db_instance = get_db()
             notification.read = True
-            notification.save()
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -190,16 +218,19 @@ def init_notification_routes(oauth_service, firebase_service):
                 }), 400
             
             # Create notification
-            notification = NotificationModel.create({
-                'user_id': data['user_id'],
-                'title': data['title'],
-                'body': data['body'],
-                'type': data.get('type', 'info'),
-                'data': data.get('data', {})
-            })
+            db_instance = get_db()
+            notification = NotificationModel(
+                user_id=data['user_id'],
+                title=data['title'],
+                body=data['body'],
+                type=data.get('type', 'info'),
+                data=data.get('data', {})
+            )
+            db_instance.session.add(notification)
+            db_instance.session.commit()
             
             # Send push notification if FCM token exists
-            user_tokens = FCMTokenModel.get_user_tokens(data['user_id'])
+            user_tokens = db_instance.session.query(FCMTokenModel).filter_by(user_id=data['user_id']).all()
             
             if user_tokens and firebase_service.initialized:
                 fcm_tokens = [token.fcm_token for token in user_tokens]

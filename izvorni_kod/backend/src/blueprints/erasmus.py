@@ -34,6 +34,8 @@ def init_erasmus_routes(oauth_service):
             
             data = request.get_json()
             
+            db_instance = get_db()
+            
             # Validate required fields
             required_fields = ['title', 'description', 'facultySlug']
             for field in required_fields:
@@ -44,7 +46,7 @@ def init_erasmus_routes(oauth_service):
                     }), 400
             
             # Verify faculty exists
-            faculty = get_db().session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
+            faculty = db_instance.session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
             if not faculty:
                 return jsonify({
                     'success': False,
@@ -81,7 +83,8 @@ def init_erasmus_routes(oauth_service):
                 status='active'
             )
             
-            project.save()
+            db_instance.session.add(project)
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -90,7 +93,8 @@ def init_erasmus_routes(oauth_service):
             }), 201
             
         except Exception as e:
-            get_db().session.rollback()
+            db_instance = get_db()
+            db_instance.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to create Erasmus project: {str(e)}'
@@ -163,7 +167,8 @@ def init_erasmus_routes(oauth_service):
                     'message': 'Only faculty members and administrators can update Erasmus projects'
                 }), 403
             
-            project = get_db().session.query(ErasmusProjectModel).get(project_id)
+            db_instance = get_db()
+            project = db_instance.session.query(ErasmusProjectModel).get(project_id)
             if not project:
                 return jsonify({
                     'success': False,
@@ -186,7 +191,7 @@ def init_erasmus_routes(oauth_service):
                 project.description = data['description']
             if 'facultySlug' in data:
                 # Verify faculty exists
-                faculty = get_db().session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
+                faculty = db_instance.session.query(FacultyModel).filter_by(slug=data['facultySlug']).first()
                 if not faculty:
                     return jsonify({
                         'success': False,
@@ -225,7 +230,7 @@ def init_erasmus_routes(oauth_service):
             if 'status' in data:
                 project.status = data['status']
             
-            project.save()
+            db_instance.session.commit()
             
             return jsonify({
                 'success': True,
@@ -234,7 +239,8 @@ def init_erasmus_routes(oauth_service):
             }), 200
             
         except Exception as e:
-            get_db().session.rollback()
+            db_instance = get_db()
+            db_instance.session.rollback()
             return jsonify({
                 'success': False,
                 'message': f'Failed to update Erasmus project: {str(e)}'
