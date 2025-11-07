@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -6,6 +7,7 @@ import '../css/ProfilePage.css';
 
 const ProfilePage = () => {
    const { user } = useAuth();
+   const navigate = useNavigate();
    const [activeTab, setActiveTab] = useState('overview');
 
    return (
@@ -38,7 +40,12 @@ const ProfilePage = () => {
                         {user?.email || 'ime.prezime@student.fer.hr'}
                      </p>
                   </div>
-                  <button className="profile-edit-btn">Uredi profil</button>
+                  <button 
+                    className="profile-edit-btn"
+                    onClick={() => navigate('/profil/uredi')}
+                  >
+                    Uredi profil
+                  </button>
                </div>
             </section>
 

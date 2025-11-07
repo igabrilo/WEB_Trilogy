@@ -301,6 +301,89 @@ class ApiService {
     });
   }
 
+  // Erasmus Projects API
+  async createErasmusProject(data: {
+    title: string;
+    description: string;
+    facultySlug: string;
+    country?: string;
+    university?: string;
+    fieldOfStudy?: string;
+    duration?: string;
+    applicationDeadline?: string;
+    requirements?: string[];
+    benefits?: string[];
+    contactEmail?: string;
+    contactPhone?: string;
+    website?: string;
+  }): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>('/api/erasmus', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getErasmusProjects(params?: { faculty?: string; fieldOfStudy?: string }): Promise<ListResponse<ErasmusProject>> {
+    const qs = new URLSearchParams();
+    if (params?.faculty) qs.append('faculty', params.faculty);
+    if (params?.fieldOfStudy) qs.append('fieldOfStudy', params.fieldOfStudy);
+    const qp = qs.toString();
+    return this.request<ListResponse<ErasmusProject>>(`/api/erasmus${qp ? `?${qp}` : ''}`);
+  }
+
+  async getErasmusProject(projectId: number): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>(`/api/erasmus/${projectId}`);
+  }
+
+  async updateErasmusProject(projectId: number, data: Partial<ErasmusProject>): Promise<ItemResponse<ErasmusProject>> {
+    return this.request<ItemResponse<ErasmusProject>>(`/api/erasmus/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteErasmusProject(projectId: number): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/erasmus/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Favorites API
+  async addFavoriteFaculty(facultySlug: string): Promise<ItemResponse<FavoriteFaculty>> {
+    return this.request<ItemResponse<FavoriteFaculty>>('/api/favorites/faculties', {
+      method: 'POST',
+      body: JSON.stringify({ facultySlug: facultySlug }),
+    });
+  }
+
+  async getFavoriteFaculties(): Promise<ListResponse<FavoriteFaculty>> {
+    return this.request<ListResponse<FavoriteFaculty>>('/api/favorites/faculties');
+  }
+
+  async removeFavoriteFaculty(facultySlug: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/api/favorites/faculties/${facultySlug}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async checkFavoriteFaculty(facultySlug: string): Promise<{ success: boolean; isFavorite: boolean }> {
+    return this.request<{ success: boolean; isFavorite: boolean }>(`/api/favorites/faculties/${facultySlug}/check`);
+  }
+
+  // Profile update API
+  async updateProfile(data: {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    faculty?: string;
+    interests?: string[];
+  }): Promise<ItemResponse<User>> {
+    return this.request<ItemResponse<User>>('/api/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Admin endpoints
   async createFaculty(data: {
     name: string;
@@ -390,6 +473,36 @@ export interface JobApplication {
     title: string;
     type: string;
   };
+}
+
+export interface ErasmusProject {
+  id: number;
+  title: string;
+  description: string;
+  facultySlug: string;
+  facultyName?: string;
+  country?: string;
+  university?: string;
+  fieldOfStudy?: string;
+  duration?: string;
+  applicationDeadline?: string;
+  requirements?: string[];
+  benefits?: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  status: 'active' | 'archived';
+  createdBy: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FavoriteFaculty {
+  id: number;
+  userId: number;
+  facultySlug: string;
+  facultyName?: string;
+  createdAt?: string;
 }
 
 export const apiService = new ApiService();

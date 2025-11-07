@@ -30,7 +30,8 @@ def seed_database(app):
         # Import model classes
         from src.models import (
             UserModel, NotificationModel, FCMTokenModel, FacultyModel,
-            AssociationModel, JobModel, JobApplicationModel, ChatSessionModel
+            AssociationModel, JobModel, JobApplicationModel, ChatSessionModel,
+            ErasmusProjectModel, FavoriteFacultyModel
         )
         
         print("Seeding database with sample data...")

@@ -24,6 +24,8 @@ try:
     from blueprints.associations import associations_bp, init_associations_routes
     from blueprints.jobs import jobs_bp, init_jobs_routes
     from blueprints.admin import admin_bp, init_admin_routes
+    from blueprints.erasmus import erasmus_bp, init_erasmus_routes
+    from blueprints.favorites import favorites_bp, init_favorites_routes
 except ImportError:
     # Fallback to relative imports if used as package
     from .config import config
@@ -41,6 +43,8 @@ except ImportError:
     from .blueprints.associations import associations_bp, init_associations_routes
     from .blueprints.jobs import jobs_bp, init_jobs_routes
     from .blueprints.admin import admin_bp, init_admin_routes
+    from .blueprints.erasmus import erasmus_bp, init_erasmus_routes
+    from .blueprints.favorites import favorites_bp, init_favorites_routes
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -89,6 +93,8 @@ def create_app(config_name=None):
     init_associations_routes(oauth_service)
     init_jobs_routes(oauth_service)
     init_admin_routes(oauth_service)
+    init_erasmus_routes(oauth_service)
+    init_favorites_routes(oauth_service)
     
     # Register blueprints
     app.register_blueprint(auth_bp)
@@ -100,6 +106,8 @@ def create_app(config_name=None):
     app.register_blueprint(associations_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(erasmus_bp)
+    app.register_blueprint(favorites_bp)
     
     # Root endpoint
     @app.route("/")
@@ -115,7 +123,9 @@ def create_app(config_name=None):
                 "chatbot": "/api/chatbot",
                 "search": "/api/search",
                 "associations": "/api/associations",
-                "faculties": "/api/faculties"
+                "faculties": "/api/faculties",
+                "erasmus": "/api/erasmus",
+                "favorites": "/api/favorites"
             }
         })
     

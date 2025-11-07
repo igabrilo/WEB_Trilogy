@@ -27,6 +27,10 @@ import CreateFacultyPage from './pages/CreateFacultyPage';
 import EditFacultyPage from './pages/EditFacultyPage';
 import EditAssociationPage from './pages/EditAssociationPage';
 import JobDetailPage from './pages/JobDetailPage';
+import EditProfilePage from './pages/EditProfilePage';
+import ErasmusProjectsPage from './pages/ErasmusProjectsPage';
+import CreateErasmusProjectPage from './pages/CreateErasmusProjectPage';
+import ErasmusProjectDetailPage from './pages/ErasmusProjectDetailPage';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import AdminFacultiesPage from './pages/AdminFacultiesPage';
 import AdminAssociationsPage from './pages/AdminAssociationsPage';
@@ -58,6 +62,9 @@ function App() {
           <Route path="/udruge/novo" element={<CreateAssociationPage />} />
           <Route path="/fakulteti/:slug" element={<FacultyDetailPage />} />
           <Route path="/pretraga" element={<SearchResultsPage />} />
+          <Route path="/erasmus" element={<ErasmusProjectsPage />} />
+          <Route path="/erasmus/novo" element={<CreateErasmusProjectPage />} />
+          <Route path="/erasmus/:id" element={<ErasmusProjectDetailPage />} />
           {/* Profile landing pages */}
           <Route path="/profil/student" element={<StudentProfilePage />} />
           <Route path="/profil/alumni" element={<AlumniProfilePage />} />
@@ -72,6 +79,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profil/uredi" 
+            element={
+              <ProtectedRoute>
+                <EditProfilePage />
               </ProtectedRoute>
             } 
           />

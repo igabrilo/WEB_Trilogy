@@ -855,3 +855,156 @@ class ChatSessionModel(db.Model):
     def __repr__(self):
         return f'<ChatSession {self.id}: User {self.user_id}>'
 
+class ErasmusProjectModel(db.Model):
+    """SQLAlchemy Erasmus Project model"""
+    __tablename__ = 'erasmus_projects'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    faculty_slug = db.Column(db.String(100), db.ForeignKey('faculties.slug'), nullable=False, index=True)
+    country = db.Column(db.String(100), nullable=True)
+    university = db.Column(db.String(255), nullable=True)
+    field_of_study = db.Column(db.String(255), nullable=True)  # Područje studija
+    duration = db.Column(db.String(100), nullable=True)  # Trajanje (npr. "1 semestar", "1 godina")
+    application_deadline = db.Column(db.Date, nullable=True)
+    requirements = db.Column(db.JSON, nullable=True)  # Array of strings
+    benefits = db.Column(db.JSON, nullable=True)  # Array of strings
+    contact_email = db.Column(db.String(255), nullable=True)
+    contact_phone = db.Column(db.String(50), nullable=True)
+    website = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(50), nullable=False, default='active', index=True)  # active, archived
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    faculty = db.relationship('FacultyModel', foreign_keys=[faculty_slug])
+    creator = db.relationship('UserModel', foreign_keys=[created_by])
+    
+    def __init__(self, title, description, faculty_slug, created_by, country=None, university=None,
+                 field_of_study=None, duration=None, application_deadline=None, requirements=None,
+                 benefits=None, contact_email=None, contact_phone=None, website=None, status='active'):
+        self.title = title
+        self.description = description
+        self.faculty_slug = faculty_slug
+        self.created_by = created_by
+        self.country = country
+        self.university = university
+        self.field_of_study = field_of_study
+        self.duration = duration
+        self.application_deadline = application_deadline
+        self.requirements = requirements or []
+        self.benefits = benefits or []
+        self.contact_email = contact_email
+        self.contact_phone = contact_phone
+        self.website = website
+        self.status = status
+    
+    def to_dict(self):
+        """Convert Erasmus project to dictionary"""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'facultySlug': self.faculty_slug,
+            'facultyName': self.faculty.name if self.faculty else None,
+            'country': self.country,
+            'university': self.university,
+            'fieldOfStudy': self.field_of_study,
+            'duration': self.duration,
+            'applicationDeadline': self.application_deadline.isoformat() if self.application_deadline else None,
+            'requirements': self.requirements or [],
+            'benefits': self.benefits or [],
+            'contactEmail': self.contact_email,
+            'contactPhone': self.contact_phone,
+            'website': self.website,
+            'status': self.status,
+            'createdBy': self.created_by,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    @classmethod
+    def create(cls, project_data):
+        """Create new Erasmus project"""
+        project = cls(
+            title=project_data['title'],
+            description=project_data['description'],
+            faculty_slug=project_data['facultySlug'],
+            created_by=project_data['created_by'],
+            country=project_data.get('country'),
+            university=project_data.get('university'),
+            field_of_study=project_data.get('fieldOfStudy'),
+            duration=project_data.get('duration'),
+            application_deadline=project_data.get('applicationDeadline'),
+            requirements=project_data.get('requirements'),
+            benefits=project_data.get('benefits'),
+            contact_email=project_data.get('contactEmail'),
+            contact_phone=project_data.get('contactPhone'),
+            website=project_data.get('website'),
+            status=project_data.get('status', 'active')
+        )
+        db.session.add(project)
+        db.session.commit()
+        return project
+    
+    def save(self):
+        """Save Erasmus project to database"""
+        db.session.add(self)
+        db.session.commit()
+    
+    def delete(self):
+        """Delete Erasmus project from database"""
+        db.session.delete(self)
+        db.session.commit()
+    
+    def __repr__(self):
+        return f'<ErasmusProject {self.title}>'
+
+class FavoriteFacultyModel(db.Model):
+    """SQLAlchemy Favorite Faculty model (many-to-many relationship)"""
+    __tablename__ = 'favorite_faculties'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    faculty_slug = db.Column(db.String(100), db.ForeignKey('faculties.slug'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Unique constraint: user can only favorite a faculty once
+    __table_args__ = (db.UniqueConstraint('user_id', 'faculty_slug', name='unique_user_faculty_favorite'),)
+    
+    # Relationships
+    user = db.relationship('UserModel', foreign_keys=[user_id])
+    faculty = db.relationship('FacultyModel', foreign_keys=[faculty_slug])
+    
+    def __init__(self, user_id, faculty_slug):
+        self.user_id = user_id
+        self.faculty_slug = faculty_slug
+    
+    def to_dict(self):
+        """Convert favorite to dictionary"""
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'facultySlug': self.faculty_slug,
+            'facultyName': self.faculty.name if self.faculty else None,
+            'createdAt': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    @classmethod
+    def create(cls, user_id, faculty_slug):
+        """Create new favorite"""
+        favorite = cls(user_id=user_id, faculty_slug=faculty_slug)
+        db.session.add(favorite)
+        db.session.commit()
+        return favorite
+    
+    def delete(self):
+        """Delete favorite from database"""
+        db.session.delete(self)
+        db.session.commit()
+    
+    def __repr__(self):
+        return f'<FavoriteFaculty User {self.user_id} -> Faculty {self.faculty_slug}>'
+

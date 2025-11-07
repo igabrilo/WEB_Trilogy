@@ -280,6 +280,49 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                 'message': f'Failed to get user: {str(e)}'
             }), 500
     
+    @auth_bp.route('/me', methods=['PUT'])
+    @oauth_service.token_required
+    def update_current_user(current_user_id, current_user_email, current_user_role):
+        """Update current authenticated user profile"""
+        try:
+            user = UserModel.find_by_id(current_user_id)
+            
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'User not found'
+                }), 404
+            
+            data = request.get_json()
+            
+            # Update fields
+            if 'firstName' in data:
+                user.first_name = data['firstName']
+            if 'lastName' in data:
+                user.last_name = data['lastName']
+            if 'username' in data:
+                user.username = data['username']
+            if 'faculty' in data:
+                user.faculty = data['faculty']
+            if 'interests' in data:
+                user.interests = data['interests']
+            
+            # Save changes
+            user.save()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'user': user.to_dict()
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Failed to update profile: {str(e)}'
+            }), 500
+    
     @auth_bp.route('/logout', methods=['POST'])
     @oauth_service.token_required
     def logout(current_user_id, current_user_email, current_user_role):

@@ -8,11 +8,13 @@ import '../css/FacultiesPage.css';
 
 const FacultiesPage = () => {
    const facultiesGridRef = useRef<HTMLDivElement>(null);
-   const { isAuthenticated } = useAuth();
+   const { isAuthenticated, user } = useAuth();
    const navigate = useNavigate();
    const [faculties, setFaculties] = useState<Faculty[]>([]);
    const [loading, setLoading] = useState(true);
    const [searchQuery, setSearchQuery] = useState('');
+   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+   const [favoritesLoading, setFavoritesLoading] = useState<Set<string>>(new Set());
 
    useEffect(() => {
       const loadFaculties = async () => {
@@ -28,6 +30,54 @@ const FacultiesPage = () => {
       };
       loadFaculties();
    }, [searchQuery]);
+
+   // Load favorites for ucenik and student
+   useEffect(() => {
+      const loadFavorites = async () => {
+         if (isAuthenticated && (user?.role === 'ucenik' || user?.role === 'student')) {
+            try {
+               const res = await apiService.getFavoriteFaculties();
+               const favoriteSlugs = new Set(res.items.map(f => f.facultySlug));
+               setFavorites(favoriteSlugs);
+            } catch (error) {
+               console.error('Error loading favorites:', error);
+            }
+         }
+      };
+      loadFavorites();
+   }, [isAuthenticated, user?.role]);
+
+   const handleToggleFavorite = async (facultySlug: string) => {
+      if (!isAuthenticated || (user?.role !== 'ucenik' && user?.role !== 'student')) {
+         navigate('/prijava');
+         return;
+      }
+
+      setFavoritesLoading(prev => new Set(prev).add(facultySlug));
+
+      try {
+         if (favorites.has(facultySlug)) {
+            await apiService.removeFavoriteFaculty(facultySlug);
+            setFavorites(prev => {
+               const newSet = new Set(prev);
+               newSet.delete(facultySlug);
+               return newSet;
+            });
+         } else {
+            await apiService.addFavoriteFaculty(facultySlug);
+            setFavorites(prev => new Set(prev).add(facultySlug));
+         }
+      } catch (error) {
+         console.error('Error toggling favorite:', error);
+         alert('Greška pri spremanju omiljenog fakulteta');
+      } finally {
+         setFavoritesLoading(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(facultySlug);
+            return newSet;
+         });
+      }
+   };
 
    useEffect(() => {
       const observerOptions = {
@@ -118,6 +168,29 @@ const FacultiesPage = () => {
                                        </p>
                                     )}
                                  </div>
+                                 {(user?.role === 'ucenik' || user?.role === 'student') && (
+                                    <button
+                                       className="favorite-btn"
+                                       onClick={() => handleToggleFavorite(faculty.slug)}
+                                       disabled={favoritesLoading.has(faculty.slug)}
+                                       style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          cursor: 'pointer',
+                                          padding: '0.5rem',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          color: favorites.has(faculty.slug) ? '#fbbf24' : '#94a3b8',
+                                          transition: 'color 0.2s'
+                                       }}
+                                       title={favorites.has(faculty.slug) ? 'Ukloni iz omiljenih' : 'Dodaj u omiljene'}
+                                    >
+                                       <svg width="24" height="24" viewBox="0 0 24 24" fill={favorites.has(faculty.slug) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                       </svg>
+                                    </button>
+                                 )}
                               </div>
                               {faculty.contacts?.website && (
                                  <p className="faculty-description" style={{ fontSize: '0.875rem', color: '#64748b' }}>
