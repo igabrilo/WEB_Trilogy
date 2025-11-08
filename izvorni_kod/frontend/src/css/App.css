@@ -1,0 +1,22 @@
+* {
+  scroll-behavior: smooth;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.home-page,
+.faculties-page,
+.internships-jobs-page,
+.profile-page,
+.resources-page,
+.login-page,
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}

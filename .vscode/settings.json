@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/izvorni_kod/backend/.venv/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/izvorni_kod/backend"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic"
+}
+

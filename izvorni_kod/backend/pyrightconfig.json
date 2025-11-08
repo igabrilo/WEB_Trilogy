@@ -1,0 +1,25 @@
+{
+    "venvPath": ".",
+    "venv": ".venv",
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "pythonVersion": "3.9",
+            "pythonPlatform": "Darwin",
+            "extraPaths": [
+                ".venv/lib/python3.9/site-packages",
+                "src"
+            ]
+        }
+    ],
+    "include": [
+        "src/**/*.py",
+        "tests/**/*.py",
+        "run.py"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        ".venv",
+        "venv"
+    ]
+}

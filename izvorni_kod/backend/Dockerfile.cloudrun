@@ -1,0 +1,48 @@
+# Cloud Run Dockerfile for Firebase/Google Cloud deployment
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Set PYTHONPATH to include src directory
+ENV PYTHONPATH=/app/src:${PYTHONPATH}
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser
+
+# Create start script for Cloud Run
+# Cloud Run provides PORT environment variable at runtime
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'exec gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 4 --threads 2 --timeout 120 --access-logfile - --error-logfile - run:application' >> /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown appuser:appuser /app/start.sh
+
+# Set ownership of entire app directory
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (Cloud Run uses PORT environment variable)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+
+# Run start script
+CMD ["/app/start.sh"]
+

@@ -1,0 +1,97 @@
+:root {
+   /* Typography */
+   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+   line-height: 1.5;
+   font-weight: 400;
+
+   /* Colors & theme variables (centralized) */
+   --color-text: #1a1a1a;
+   --color-bg: #ffffff;
+   /* primary blue from logo - dark university blue */
+   --primary-blue: #003d82;
+   /* darker shade */
+   --primary-blue-dark: #002855;
+   /* lighter shade */
+   --primary-blue-light: #e8f0f7;
+   /* rgb helper for shadows */
+   --primary-blue-rgb: 0, 61, 130;
+
+   color-scheme: light;
+   color: var(--color-text);
+   background-color: var(--color-bg);
+
+   font-synthesis: none;
+   text-rendering: optimizeLegibility;
+   -webkit-font-smoothing: antialiased;
+   -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+   font-weight: 500;
+   color: var(--primary-blue);
+   text-decoration: inherit;
+}
+
+a:hover {
+   color: var(--primary-blue-dark);
+}
+
+body {
+   margin: 0;
+   min-width: 320px;
+   min-height: 100vh;
+   background-color: var(--color-bg);
+   color: var(--color-text);
+}
+
+#root {
+   background-color: var(--color-bg);
+   min-height: 100vh;
+   width: 100%;
+   display: block;
+}
+
+* {
+   box-sizing: border-box;
+}
+
+h1 {
+   font-size: 3.2em;
+   line-height: 1.1;
+}
+
+button {
+   border-radius: 8px;
+   border: 1px solid transparent;
+   padding: 0.6em 1.2em;
+   font-size: 1em;
+   font-weight: 500;
+   font-family: inherit;
+   background-color: #1a1a1a;
+   cursor: pointer;
+   transition: border-color 0.25s;
+}
+
+button:hover {
+   border-color: var(--primary-blue);
+}
+
+button:focus,
+button:focus-visible {
+   outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+   :root {
+      color: #213547;
+      background-color: var(--color-bg);
+   }
+
+   a:hover {
+      color: var(--primary-blue-dark);
+   }
+
+   button {
+      background-color: #f9f9f9;
+   }
+}

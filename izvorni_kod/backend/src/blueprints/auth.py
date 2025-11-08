@@ -1,0 +1,323 @@
+from flask import Blueprint, request, jsonify, current_app
+
+# Support both absolute and relative imports
+try:
+    from models import UserModel  # Import SQLAlchemy model
+    from oauth2_service import OAuth2Service
+    from firebase_service import FirebaseService
+    from utils import is_faculty_email
+    from aai_service import AAIService
+    from database import db
+except ImportError:
+    from ..models import UserModel  # Import SQLAlchemy model
+    from ..oauth2_service import OAuth2Service
+    from ..firebase_service import FirebaseService
+    from ..utils import is_faculty_email
+    from ..aai_service import AAIService
+    from ..database import db
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+def get_db():
+    """Get db instance from current app"""
+    return current_app.extensions['sqlalchemy']
+
+def init_auth_routes(oauth_service, firebase_service, aai_service):
+    """Initialize auth routes with services"""
+    
+    @auth_bp.route('/register', methods=['POST'])
+    def register():
+        """Register a new user"""
+        try:
+            data = request.get_json()
+            
+            # Validate required fields based on role
+            requested_role = data.get('role', 'student')
+            is_institutional = requested_role in ['employer', 'poslodavac', 'faculty', 'fakultet']
+            
+            # Check basic required fields
+            if not data.get('email') or not data.get('password'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Email and password are required'
+                }), 400
+            
+            # For institutional roles, require username; for others, require firstName/lastName
+            if is_institutional:
+                if not data.get('username'):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Korisničko ime je obavezno'
+                    }), 400
+            else:
+                if not data.get('firstName') or not data.get('lastName'):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Ime i prezime su obavezni'
+                    }), 400
+            
+            # Check if user already exists
+            db_instance = get_db()
+            existing_user = db_instance.session.query(UserModel).filter_by(email=data['email']).first()
+            if existing_user:
+                return jsonify({
+                    'success': False,
+                    'message': 'User with this email already exists'
+                }), 400
+            
+            # Validate password length
+            if len(data['password']) < 6:
+                return jsonify({
+                    'success': False,
+                    'message': 'Password must be at least 6 characters long'
+                }), 400
+            
+            # Validate role-specific requirements
+            email = data['email']
+            
+            # Allow registration for all roles without domain restrictions (for testing purposes)
+            # Faculty role can be registered with any email address
+            # Note: AAI@EduHr login is optional, not required
+            
+            # Create new user using SQLAlchemy model
+            try:
+                if is_institutional:
+                    new_user = UserModel(
+                        email=data['email'],
+                        password=data['password'],
+                        username=data['username'],
+                        role=requested_role,
+                        provider='local'
+                    )
+                else:
+                    new_user = UserModel(
+                        email=data['email'],
+                        password=data['password'],
+                        first_name=data['firstName'],
+                        last_name=data['lastName'],
+                        role=requested_role,
+                        faculty=data.get('faculty'),
+                        interests=data.get('interests'),
+                        provider='local'
+                    )
+                
+                db_instance.session.add(new_user)
+                db_instance.session.commit()
+                
+                # Generate JWT token
+                token = oauth_service.generate_token(
+                    new_user.id,
+                    new_user.email,
+                    new_user.role
+                )
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'User registered successfully',
+                    'user': new_user.to_dict(),
+                    'token': token
+                }), 201
+                
+            except Exception as db_error:
+                get_db().session.rollback()
+                return jsonify({
+                    'success': False,
+                    'message': f'Database error: {str(db_error)}'
+                }), 500
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Registration failed: {str(e)}'
+            }), 500
+    
+    @auth_bp.route('/login', methods=['POST'])
+    def login():
+        """Login with email and password"""
+        try:
+            data = request.get_json()
+            
+            if not data or not data.get('email'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Email is required'
+                }), 400
+            
+            email = data['email']
+            
+            # Check if this is admin login
+            ADMIN_EMAIL = 'ivan.gabrilo@gmail.com'
+            ADMIN_PASSWORD = 'ivan55'
+            
+            if email == ADMIN_EMAIL:
+                # Admin login - check password
+                if not data.get('password'):
+                    return jsonify({
+                        'success': False,
+                        'message': 'Password is required'
+                    }), 400
+                
+                if data['password'] != ADMIN_PASSWORD:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Invalid email or password'
+                    }), 401
+                
+                # Find or create admin user using SQLAlchemy
+                db_instance = get_db()
+                admin_user = db_instance.session.query(UserModel).filter_by(email=ADMIN_EMAIL).first()
+                if not admin_user:
+                    # Create admin user if doesn't exist
+                    admin_user = UserModel(
+                        email=ADMIN_EMAIL,
+                        password=ADMIN_PASSWORD,
+                        first_name='Admin',
+                        last_name='User',
+                        role='admin',
+                        provider='local'
+                    )
+                    db_instance.session.add(admin_user)
+                    db_instance.session.commit()
+                
+                # Ensure user has admin role
+                if admin_user.role != 'admin':
+                    admin_user.role = 'admin'
+                    db_instance.session.commit()
+                
+                # Generate token
+                token = oauth_service.generate_token(
+                    admin_user.id,
+                    ADMIN_EMAIL,
+                    'admin'
+                )
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Login successful',
+                    'user': admin_user.to_dict(),
+                    'token': token
+                }), 200
+            
+            # Regular email/password login (AAI login is optional, not required)
+            if not data.get('password'):
+                return jsonify({
+                    'success': False,
+                    'message': 'Password is required'
+                }), 400
+            
+            # Find user using SQLAlchemy
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).filter_by(email=email).first()
+            
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid email or password'
+                }), 401
+            
+            # Check password
+            if not user.check_password(data['password']):
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid email or password'
+                }), 401
+            
+            # Generate token
+            token = oauth_service.generate_token(
+                user.id,
+                user.email,
+                user.role
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'Login successful',
+                'user': user.to_dict(),
+                'token': token
+            }), 200
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Login failed: {str(e)}'
+            }), 500
+    
+    @auth_bp.route('/me', methods=['GET'])
+    @oauth_service.token_required
+    def get_current_user(current_user_id, current_user_email, current_user_role):
+        """Get current authenticated user"""
+        try:
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).get(current_user_id)
+            
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'User not found'
+                }), 404
+            
+            # UserModel already has to_dict() method
+            user_response = user.to_dict()
+            
+            # Return user directly (not wrapped in success/message)
+            return jsonify(user_response), 200
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Failed to get user: {str(e)}'
+            }), 500
+    
+    @auth_bp.route('/me', methods=['PUT'])
+    @oauth_service.token_required
+    def update_current_user(current_user_id, current_user_email, current_user_role):
+        """Update current authenticated user profile"""
+        try:
+            db_instance = get_db()
+            user = db_instance.session.query(UserModel).get(current_user_id)
+            
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'User not found'
+                }), 404
+            
+            data = request.get_json()
+            
+            # Update fields
+            if 'firstName' in data:
+                user.first_name = data['firstName']
+            if 'lastName' in data:
+                user.last_name = data['lastName']
+            if 'username' in data:
+                user.username = data['username']
+            if 'faculty' in data:
+                user.faculty = data['faculty']
+            if 'interests' in data:
+                user.interests = data['interests']
+            
+            # Save changes
+            db_instance.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated successfully',
+                'user': user.to_dict()
+            }), 200
+            
+        except Exception as e:
+            get_db().session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Failed to update profile: {str(e)}'
+            }), 500
+    
+    @auth_bp.route('/logout', methods=['POST'])
+    @oauth_service.token_required
+    def logout(current_user_id, current_user_email, current_user_role):
+        """Logout user (client should remove token)"""
+        return jsonify({
+            'success': True,
+            'message': 'Logout successful'
+        }), 200
+
