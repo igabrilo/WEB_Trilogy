@@ -10,6 +10,18 @@ const ProfilePage = () => {
    const navigate = useNavigate();
    const [activeTab, setActiveTab] = useState('overview');
 
+   // Redirect employer and faculty to home page (they should use their dashboard instead)
+   useEffect(() => {
+      if (user && (user.role === 'employer' || user.role === 'poslodavac' || user.role === 'faculty' || user.role === 'fakultet')) {
+         navigate('/', { replace: true });
+      }
+   }, [user, navigate]);
+
+   // Don't render profile page for employers and faculty
+   if (user && (user.role === 'employer' || user.role === 'poslodavac' || user.role === 'faculty' || user.role === 'fakultet')) {
+      return null;
+   }
+
    return (
       <div className="profile-page">
          <Header />

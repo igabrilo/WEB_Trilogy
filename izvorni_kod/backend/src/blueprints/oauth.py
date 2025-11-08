@@ -105,22 +105,24 @@ def init_oauth_routes(oauth_service, firebase_service):
                         redirect_url = f"{frontend_url}/prijava?error={error_msg}"
                         return redirect(redirect_url)
                     
-                    # Check if email is from faculty domain - don't allow Google login for faculty
+                    # Create new user in database
+                    # Note: Google login is now allowed for all roles including faculty
                     from utils import is_faculty_email
-                    if is_faculty_email(user_info['email']):
-                        import urllib.parse
-                        frontend_url = request.headers.get('Origin') or request.args.get('frontend_url') or 'http://localhost:5173'
-                        error_msg = urllib.parse.quote('Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava. Google prijava nije dostupna za fakultetske email adrese.')
-                        redirect_url = f"{frontend_url}/prijava?error={error_msg}"
-                        return redirect(redirect_url)
                     
-                    # Create new user in database (default role student)
+                    # If email is from faculty domain, default role is faculty, otherwise student
+                    default_role = 'faculty' if is_faculty_email(user_info['email']) else 'student'
+                    
+                    # For institutional roles (faculty), use username
+                    is_institutional = default_role in ['faculty', 'fakultet']
+                    username = user_info.get('firstName', '') if is_institutional else None
+                    
                     new_user = UserModel(
                         email=user_info['email'],
                         password=None,  # No password for OAuth users
-                        first_name=user_info['firstName'],
-                        last_name=user_info['lastName'],
-                        role='student',  # Default role, can be changed in profile
+                        first_name=user_info['firstName'] if not is_institutional else username,
+                        last_name=user_info['lastName'] if not is_institutional else '',
+                        username=username,
+                        role=default_role,
                         provider='google',
                         provider_id=user_info['provider_id']
                     )

@@ -75,20 +75,9 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
             # Validate role-specific requirements
             email = data['email']
             
-            # If registering as faculty, email must be from faculty domain
-            if requested_role in ['faculty', 'fakultet']:
-                if not is_faculty_email(email):
-                    return jsonify({
-                        'success': False,
-                        'message': 'Fakulteti se moraju registrirati s email adresom s fakultetske domene'
-                    }), 400
-            
-            # If email is from faculty domain but role is not faculty, suggest faculty role
-            if is_faculty_email(email) and requested_role not in ['faculty', 'fakultet']:
-                return jsonify({
-                    'success': False,
-                    'message': 'Email adresa s fakultetske domene zahtijeva registraciju kao fakultet. Fakulteti se prijavljuju preko AAI@EduHr sustava.'
-                }), 400
+            # Allow registration for all roles without domain restrictions (for testing purposes)
+            # Faculty role can be registered with any email address
+            # Note: AAI@EduHr login is optional, not required
             
             # Create new user using SQLAlchemy model
             try:
@@ -209,22 +198,11 @@ def init_auth_routes(oauth_service, firebase_service, aai_service):
                     'token': token
                 }), 200
             
-            # Check if email is from a faculty domain
-            if is_faculty_email(email):
-                # Redirect to AAI@EduHr login
-                aai_login_url = aai_service.get_login_url()
-                return jsonify({
-                    'success': False,
-                    'requires_aai': True,
-                    'message': 'Faculty email detected. Please use AAI@EduHr login.',
-                    'aai_login_url': aai_login_url
-                }), 200  # Return 200 so frontend can handle redirect
-            
-            # Regular email/password login for non-faculty emails
+            # Regular email/password login (AAI login is optional, not required)
             if not data.get('password'):
                 return jsonify({
                     'success': False,
-                    'message': 'Password is required for non-faculty emails'
+                    'message': 'Password is required'
                 }), 400
             
             # Find user using SQLAlchemy

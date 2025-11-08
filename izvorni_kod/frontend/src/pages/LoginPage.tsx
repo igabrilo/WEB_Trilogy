@@ -31,8 +31,9 @@ const LoginPage = () => {
   const roleLabel = useMemo(() => (selectedRole ? ROLE_LABELS[selectedRole] || '' : ''), [selectedRole]);
 
   // Determine which login options to show based on role
-  const showGoogleLogin = selectedRole !== 'faculty' && selectedRole !== 'fakultet';
-  const showAAILogin = selectedRole === 'faculty' || selectedRole === 'fakultet';
+  // AAI login is optional for all roles (not required)
+  const showGoogleLogin = true; // Allow Google login for all roles
+  const showAAILogin = selectedRole === 'faculty' || selectedRole === 'fakultet'; // Show AAI option for faculty, but email/password is also allowed
 
   // Handle OAuth callback if token is in URL
   useEffect(() => {
@@ -83,29 +84,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // For faculty role, always require AAI login
-      if (selectedRole === 'faculty' || selectedRole === 'fakultet') {
-        // Check if email is from faculty domain
-        const response = await apiService.login(formData);
-        if (response.requires_aai && response.aai_login_url) {
-          window.location.href = response.aai_login_url;
-          return;
-        } else {
-          setError('Za fakultete je potrebna AAI@EduHr prijava. Molimo unesite email s fakultetske domene.');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // For other roles, check if AAI login is required (faculty email detected)
-      const response = await apiService.login(formData);
-      if (response.requires_aai && response.aai_login_url) {
-        // Redirect to AAI login
-        window.location.href = response.aai_login_url;
-        return;
-      }
-
-      // If we get here, it's a successful login (AAI check passed or not needed)
+      // Regular email/password login (AAI login is optional, not required)
       // Use the AuthContext login which handles token storage
       await login(formData);
       // Small delay to ensure state is updated before navigation
@@ -128,11 +107,7 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = async () => {
-    // Don't allow Google login for faculty
-    if (selectedRole === 'faculty' || selectedRole === 'fakultet') {
-      setError('Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava.');
-      return;
-    }
+    // Google login is allowed for all roles including faculty
 
     setError('');
     setIsGoogleLoading(true);
@@ -298,8 +273,8 @@ const LoginPage = () => {
                 {showAAILogin && (
                   <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
                     <p style={{ margin: 0, fontSize: '0.875rem', color: '#0c4a6e' }}>
-                      <strong>Napomena:</strong> Fakulteti se prijavljuju isključivo preko AAI@EduHr sustava.
-                      Unesite email adresu s fakultetske domene i bit ćete preusmjereni na AAI@EduHr prijavu.
+                      <strong>Napomena:</strong> Fakulteti se mogu prijaviti koristeći email i lozinku ili preko AAI@EduHr sustava.
+                      AAI@EduHr prijava je opcija za korisnike s fakultetskom email adresom.
                     </p>
                   </div>
                 )}

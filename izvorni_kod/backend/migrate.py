@@ -453,6 +453,22 @@ def seed_database(app):
             )
             db.session.add(admin_user)
         
+        # Create test faculty user (mock for testing)
+        # Using non-faculty email domain so it can use email/password login
+        test_faculty_email = 'test-fakultet@example.com'
+        existing_faculty = db.session.query(UserModel).filter_by(email=test_faculty_email).first()
+        if not existing_faculty:
+            test_faculty_user = UserModel(
+                email=test_faculty_email,
+                password='fakultet123',
+                username='FER - Test Fakultet',  # Institutional role uses username
+                first_name='FER - Test Fakultet',
+                last_name='',
+                role='faculty'
+            )
+            db.session.add(test_faculty_user)
+            print(f"  ✓ Added test faculty user: {test_faculty_email} (password: fakultet123)")
+        
         # Create all associations from mock data
         associations_data = [
             {

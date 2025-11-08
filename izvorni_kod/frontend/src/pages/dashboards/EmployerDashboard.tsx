@@ -27,8 +27,8 @@ export default function EmployerDashboard() {
               <button className="btn-secondary" onClick={() => navigate('/prakse-i-poslovi/prijave')}>
                 Pregled prijava
               </button>
-              <button className="btn-secondary" onClick={() => navigate('/profil')}>
-                Moj profil
+              <button className="btn-secondary" onClick={() => navigate('/profil/uredi')}>
+                Uredi profil
               </button>
             </div>
           </div>
