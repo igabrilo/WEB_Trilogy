@@ -5,6 +5,11 @@
 # But keep .env.example as a template
 !.env.example
 
+# Explicitly ignore .env files in all directories
+**/.env
+!**/.env.example
+!.env.example
+
 # Docker
 docker-compose.override.yml
 
