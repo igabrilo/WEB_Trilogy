@@ -1,9 +1,7 @@
-// For browser requests, use localhost:5001 (backend port mapped from Docker)
-// The VITE_API_URL env var is for Docker internal network (backend:5000)
-// But browser requests need to go through the host port 5001
-const API_URL = import.meta.env.VITE_API_URL?.includes('localhost')
-  ? import.meta.env.VITE_API_URL
-  : 'http://localhost:5001';
+// API URL configuration
+// In production (Firebase), VITE_API_URL is set during build: VITE_API_URL="${BACKEND_URL}/api"
+// In development, fallback to localhost:5001
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface LoginCredentials {
   email: string;
@@ -194,7 +192,9 @@ class ApiService {
 
   async initiateGoogleLogin(): Promise<void> {
     // Redirect to backend OAuth endpoint which will redirect to Google
-    const googleLoginUrl = `${this.baseURL}/api/oauth/login/google`;
+    // baseURL should already include /api if VITE_API_URL ends with /api, or we add it here
+    const apiBase = this.baseURL.endsWith('/api') ? this.baseURL : `${this.baseURL}/api`;
+    const googleLoginUrl = `${apiBase}/oauth/login/google`;
     window.location.href = googleLoginUrl;
   }
 

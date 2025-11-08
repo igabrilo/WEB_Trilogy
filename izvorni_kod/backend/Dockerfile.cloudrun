@@ -27,8 +27,10 @@ RUN useradd -m -u 1000 appuser
 
 # Create start script for Cloud Run
 # Cloud Run provides PORT environment variable at runtime
+# Use single quotes in echo to prevent variable expansion during build
 RUN echo '#!/bin/bash' > /app/start.sh && \
-    echo 'exec gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 4 --threads 2 --timeout 120 --access-logfile - --error-logfile - run:application' >> /app/start.sh && \
+    echo 'PORT=${PORT:-8080}' >> /app/start.sh && \
+    echo 'exec gunicorn --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 120 --access-logfile - --error-logfile - run:application' >> /app/start.sh && \
     chmod +x /app/start.sh && \
     chown appuser:appuser /app/start.sh
 

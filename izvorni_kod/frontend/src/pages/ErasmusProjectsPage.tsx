@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 import '../css/Dashboard.css';
 
 export default function ErasmusProjectsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ErasmusProject[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);

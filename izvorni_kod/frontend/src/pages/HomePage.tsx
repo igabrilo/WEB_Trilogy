@@ -24,7 +24,7 @@ const HomePage = () => {
             refreshUser().catch(() => {
                // If refresh fails, use stored user
                try {
-                  const parsedUser = JSON.parse(storedUser);
+                  JSON.parse(storedUser);
                   // This will be handled by AuthContext, but we can force a re-check
                } catch (e) {
                   // Invalid stored user

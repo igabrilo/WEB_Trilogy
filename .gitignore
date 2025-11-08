@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+# But keep .env.example as a template
+!.env.example
 
 # Docker
 docker-compose.override.yml
@@ -55,6 +57,11 @@ build/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+**/config/firebase_key.json
+**/firebase_key.json
+
+# Vite
+.vite/
 
 # Heroku
 .heroku/

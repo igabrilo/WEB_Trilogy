@@ -2,17 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { useAuth } from '../contexts/AuthContext';
 import { apiService, type ErasmusProject } from '../services/api';
 import '../css/FormPage.css';
 
 export default function ErasmusProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [project, setProject] = useState<ErasmusProject | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     const loadProject = async () => {
@@ -21,7 +18,7 @@ export default function ErasmusProjectDetailPage() {
         const res = await apiService.getErasmusProject(parseInt(id));
         setProject(res.item);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Greška pri učitavanju projekta');
+        console.error('Error loading project:', err);
       } finally {
         setLoading(false);
       }
