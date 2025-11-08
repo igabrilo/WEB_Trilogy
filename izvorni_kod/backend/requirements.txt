@@ -35,3 +35,5 @@ lxml>=6.0.0
 cryptography==42.0.5
 # XML security (dependency of python3-saml)
 defusedxml==0.7.1
+# Production WSGI server
+gunicorn==21.2.0

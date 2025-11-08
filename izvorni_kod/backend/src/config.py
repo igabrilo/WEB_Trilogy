@@ -34,8 +34,13 @@ class Config:
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
     
     # Database Configuration
+    # Heroku provides DATABASE_URL automatically when using Postgres addon
     DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    # Handle Heroku Postgres connection string format
+    if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_timeout': 20,
