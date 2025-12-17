@@ -3,6 +3,7 @@
 # UNIZG Career Hub
 
 ## Opis web aplikacije
+## deploy na adresi : https://unizg-career-hub.web.app
 
 <html>
 <body>
