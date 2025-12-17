@@ -168,6 +168,9 @@ Rezultati pretraga prikazuju se uz paginaciju radi bolje preglednosti i performa
 <h3 data-start="3542" data-end="3559"><strong data-start="3546" data-end="3559">Zaključak</strong></h3>
 <p data-start="3561" data-end="3851"><strong data-start="3561" data-end="3581">UNIZG Career Hub</strong> povezuje učenike, studente, alumnije, poslodavce i sastavnice Sveučilišta u Zagrebu kroz jedinstveno, digitalno i interaktivno sučelje.<br data-start="3717" data-end="3720">
 Projekt promiče razvoj karijera, međunarodnu suradnju i vidljivost Sveučilišta kroz transparentan, suvremen i lako proširiv sustav.</p>
+<hr data-start="3537" data-end="3540">
+<h3><strong>Postignuća</strong></h3>
+<p>Aplikacija je osvojila <strong>3. mjesto na hackathonu</strong>.</p>
 <!--EndFragment-->
 </body>
 </html>
